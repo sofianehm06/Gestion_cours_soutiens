@@ -1,0 +1,25 @@
+name: Construire l'exécutable Windows
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tests
+        run: python -m unittest -v
+      - name: Construire GestionSoutien.exe
+        run: |
+          pip install pyinstaller
+          pyinstaller --onefile --windowed --name GestionSoutien main.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GestionSoutien-windows
+          path: dist/GestionSoutien.exe
