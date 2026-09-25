@@ -1,54 +1,56 @@
-# Gestion Soutien
+# SoutienPro
 
-Logiciel de bureau pour gérer des cours de soutien : présence des élèves, séances faites
-et ce que chaque élève doit.
+Application de bureau pour les professeurs de cours de soutien scolaire : gestion des groupes,
+des élèves, de la présence et des paiements mensuels. Interface en français (par défaut) et en arabe.
 
-Technologies : **React + TypeScript + Tailwind CSS** (la même pile que les interfaces
-générées par Lovable), emballées en application de bureau avec **Electron**.
+## Fonctionnalités
 
-## Principe
+- **Tableau de bord** : élèves actifs, revenu attendu du mois, revenu encaissé, reste à encaisser,
+  liste des élèves en retard de paiement (avec les mois impayés et le montant dû).
+- **Groupes** : nom, niveau scolaire, tarif mensuel en DA (chaque groupe a son propre tarif).
+- **Élèves** : fiche (nom, prénom, téléphone du parent, date d'inscription), rattachement à un ou
+  plusieurs groupes avec tarif personnalisé optionnel, filtre par groupe / statut, recherche,
+  arrêt des cours (actif / inactif), fiche détaillée avec historique des paiements et des présences.
+- **Présence** : appel du jour en un clic par élève (tout le monde est présent par défaut),
+  historique par groupe ou par élève.
+- **Paiements** : vue mensuelle par groupe (payé / non payé / en retard), encaissement avec
+  montant et date, annulation.
 
-- **1 mois = 4 séances = 1500 DA**, soit **375 DA la séance** (modifiable dans *Paramètres*).
-- Montant dû = somme des séances faites. Reste à payer = montant dû − paiements.
-- Si le tarif change, les séances déjà enregistrées gardent leur prix.
+Un mois non payé est considéré **en retard** après le 10 du mois (`PAYMENT_DUE_DAY` dans
+`shared/types.ts`), ou dès que le mois est passé.
 
-## Écrans
+## Stack
 
-| Écran | Rôle |
-|---|---|
-| **Tableau de bord** | Élèves actifs, séances et encaissements du mois, reste à encaisser, liste des élèves qui doivent (bouton *Encaisser*), présence des dernières séances, derniers paiements. |
-| **Présence** | On choisit la date, on clique sur les cartes des élèves présents (le panneau de droite récapitule la séance), puis *Enregistrer la présence*. On peut revenir sur une date pour corriger. |
-| **Élèves** | Tableau avec filtres (actifs / doivent / à jour / inactifs) et recherche. Un clic ouvre la fiche : dû, payé, reste, historique des séances et paiements, encaisser, ajouter une séance, modifier, archiver, supprimer. |
-| **Paiements** | Paiements mois par mois, total encaissé. |
-| **Paramètres** | Nom affiché, tarif, export Excel (CSV), sauvegarde / restauration. |
+- Electron + React + TypeScript (Vite pour l'interface)
+- SQLite via `better-sqlite3` (binaires précompilés, aucune compilation native nécessaire)
+- `react-i18next` pour le français et l'arabe (mise en page RTL automatique)
 
-## Données
+Les données sont stockées localement dans `soutienpro.sqlite`, dans le dossier de données de
+l'application (`%APPDATA%\SoutienPro` sous Windows).
 
-Les données sont enregistrées automatiquement dans un fichier `donnees.json` (et une copie
-`donnees.json.bak` de la version précédente) :
+## Structure
 
-- Windows : `%APPDATA%\Gestion Soutien\`
-- Linux : `~/.config/Gestion Soutien/`
+```
+electron/   processus principal : fenêtre, base SQLite (database.ts), requêtes (repository.ts), preload
+shared/     types et règles métier partagés (statut de paiement, dates)
+src/        interface React : pages, composants, traductions (locales/)
+tests/      tests de la couche de données (Vitest, base en mémoire)
+```
 
-Faites régulièrement une sauvegarde (Paramètres → *Faire une sauvegarde*) sur une clé USB.
-
-## Obtenir le programme Windows
-
-À chaque push, GitHub Actions construit :
-
-- `GestionSoutien-Installation-….exe` : installateur (crée un raccourci sur le bureau) ;
-- `GestionSoutien-Portable-….exe` : version sans installation.
-
-Onglet **Actions** du dépôt → dernier run → artefact *GestionSoutien-windows*.
-
-Construction manuelle sous Windows : `npm ci` puis `npm run dist:win` (résultat dans `release/`).
-
-## Développement
+## Commandes
 
 ```bash
-npm install
-npm run electron:dev   # application avec rechargement à chaud
-npm run dev            # interface seule dans le navigateur (données dans localStorage)
-npm test               # tests des calculs
-npm start              # build + lancement Electron
+npm install          # installer les dépendances
+npm run dev          # lancer en développement (rechargement à chaud de l'interface)
+npm start            # construire puis lancer l'application
+npm test             # tests
+npm run typecheck    # vérification TypeScript
+npm run dist:win     # installateur + version portable Windows dans release/
 ```
+
+Le workflow GitHub Actions `build-windows.yml` construit automatiquement l'installateur Windows
+à chaque push (artefact « SoutienPro-windows »).
+
+## Prévu pour une version future
+
+- Rappels de paiement par SMS / WhatsApp.

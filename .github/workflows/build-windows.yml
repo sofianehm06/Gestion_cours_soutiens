@@ -1,4 +1,4 @@
-name: Construire l'application Windows
+name: Construire SoutienPro pour Windows
 
 on:
   push:
@@ -15,6 +15,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run typecheck
       - run: npm test
       - name: Construire l'installateur et la version portable
         run: npm run dist:win
@@ -22,5 +23,5 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - uses: actions/upload-artifact@v4
         with:
-          name: GestionSoutien-windows
+          name: SoutienPro-windows
           path: release/*.exe

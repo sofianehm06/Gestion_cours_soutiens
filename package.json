@@ -1,26 +1,28 @@
 {
-  "name": "gestion-soutien",
-  "productName": "Gestion Soutien",
-  "version": "2.0.0",
-  "description": "Gestion des cours de soutien : élèves, présences et paiements",
-  "author": "Gestion Soutien",
+  "name": "soutienpro",
+  "productName": "SoutienPro",
+  "version": "1.0.0",
+  "description": "Gestion des cours de soutien scolaire : groupes, élèves, présences et paiements",
+  "author": "SoutienPro",
   "private": true,
-  "type": "module",
-  "main": "electron/main.cjs",
+  "main": "dist-electron/electron/main.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "dev": "npm run build:main && concurrently -k \"vite --port 5173 --strictPort\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
+    "build:main": "tsc -p tsconfig.electron.json",
+    "build:renderer": "tsc -p tsconfig.json && vite build",
+    "build": "npm run build:main && npm run build:renderer",
     "start": "npm run build && electron .",
-    "electron:dev": "concurrently -k \"vite --port 5173 --strictPort\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
-    "dist:win": "npm run build && electron-builder --win --publish never",
-    "test": "vitest run"
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.electron.json --noEmit",
+    "test": "vitest run",
+    "dist:win": "npm run build && electron-builder --win --publish never"
   },
   "build": {
-    "appId": "dz.gestion.soutien",
-    "productName": "Gestion Soutien",
+    "appId": "dz.soutienpro.app",
+    "productName": "SoutienPro",
+    "npmRebuild": false,
     "files": [
       "dist/**",
-      "electron/**"
+      "dist-electron/**"
     ],
     "directories": {
       "output": "release"
@@ -35,21 +37,23 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Gestion Soutien",
-      "artifactName": "GestionSoutien-Installation-${version}.${ext}"
+      "shortcutName": "SoutienPro",
+      "artifactName": "SoutienPro-Installation-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "GestionSoutien-Portable-${version}.${ext}"
+      "artifactName": "SoutienPro-Portable-${version}.${ext}"
     }
   },
   "dependencies": {
-    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
-    "lucide-react": "^1.48.0",
+    "better-sqlite3": "^13.0.3",
+    "i18next": "^26.4.2",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "react-i18next": "^17.0.15"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
@@ -57,7 +61,6 @@
     "cross-env": "^10.1.0",
     "electron": "^44.4.5",
     "electron-builder": "^26.15.3",
-    "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
     "vitest": "^5.0.2",
