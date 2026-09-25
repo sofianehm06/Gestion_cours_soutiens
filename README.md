@@ -1,55 +1,54 @@
-# Gestion des cours de soutien
+# Gestion Soutien
 
-Logiciel de bureau (Windows / Linux / macOS) pour suivre la présence des élèves
-et ce que chacun doit payer.
+Logiciel de bureau pour gérer des cours de soutien : présence des élèves, séances faites
+et ce que chaque élève doit.
+
+Technologies : **React + TypeScript + Tailwind CSS** (la même pile que les interfaces
+générées par Lovable), emballées en application de bureau avec **Electron**.
 
 ## Principe
 
-- Liste des élèves : nom, prénom, téléphone, niveau.
-- Chaque présence = 1 séance. **1 mois = 4 séances = 1500 DA**, soit **375 DA la séance**
-  (modifiable dans l'onglet *Paramètres*).
-- Montant dû = séances faites × prix d'une séance. Reste à payer = montant dû − paiements.
-- Si le tarif change, les séances déjà enregistrées gardent l'ancien prix.
+- **1 mois = 4 séances = 1500 DA**, soit **375 DA la séance** (modifiable dans *Paramètres*).
+- Montant dû = somme des séances faites. Reste à payer = montant dû − paiements.
+- Si le tarif change, les séances déjà enregistrées gardent leur prix.
 
-## Onglets
+## Écrans
 
-| Onglet | Rôle |
+| Écran | Rôle |
 |---|---|
-| **Élèves** | Liste avec séances, « soit X mois + Y séances », montant dû, payé, reste (en rouge si l'élève doit de l'argent, en vert s'il a payé d'avance). Ajouter / modifier / supprimer un élève, ajouter une séance, enregistrer un paiement, voir l'historique (double-clic). |
-| **Présence** | Choisir la date, cocher les élèves présents, *Enregistrer la présence*. On peut revenir sur une date pour corriger. |
-| **Paiements** | Tous les paiements, total encaissé du mois. |
-| **Paramètres** | Tarif mensuel et nombre de séances par mois, export Excel (CSV), sauvegarde / restauration. |
-
-Un élève qui arrête peut être marqué « inactif » (bouton *Modifier*) : il disparaît de la
-feuille de présence mais son historique est conservé.
+| **Tableau de bord** | Élèves actifs, séances et encaissements du mois, reste à encaisser, liste des élèves qui doivent (bouton *Encaisser*), présence des dernières séances, derniers paiements. |
+| **Présence** | On choisit la date, on clique sur les cartes des élèves présents (le panneau de droite récapitule la séance), puis *Enregistrer la présence*. On peut revenir sur une date pour corriger. |
+| **Élèves** | Tableau avec filtres (actifs / doivent / à jour / inactifs) et recherche. Un clic ouvre la fiche : dû, payé, reste, historique des séances et paiements, encaisser, ajouter une séance, modifier, archiver, supprimer. |
+| **Paiements** | Paiements mois par mois, total encaissé. |
+| **Paramètres** | Nom affiché, tarif, export Excel (CSV), sauvegarde / restauration. |
 
 ## Données
 
-Tout est stocké localement dans un fichier SQLite :
+Les données sont enregistrées automatiquement dans un fichier `donnees.json` (et une copie
+`donnees.json.bak` de la version précédente) :
 
-- Windows : `%APPDATA%\GestionSoutien\soutien.db`
-- Linux / macOS : `~/.gestion_soutien/soutien.db`
+- Windows : `%APPDATA%\Gestion Soutien\`
+- Linux : `~/.config/Gestion Soutien/`
 
-Pensez à faire régulièrement une sauvegarde (onglet *Paramètres*) sur une clé USB.
+Faites régulièrement une sauvegarde (Paramètres → *Faire une sauvegarde*) sur une clé USB.
 
-## Obtenir le `.exe` pour Windows
+## Obtenir le programme Windows
 
-À chaque push, GitHub Actions construit `GestionSoutien.exe` (onglet **Actions** du dépôt →
-dernier run → artefact *GestionSoutien-windows*). Aucune installation de Python n'est
-nécessaire chez la cliente : il suffit de copier l'exe sur son PC.
+À chaque push, GitHub Actions construit :
 
-Construction manuelle sous Windows :
+- `GestionSoutien-…-nsis.exe` : installateur (crée un raccourci sur le bureau) ;
+- `GestionSoutien-…-portable.exe` : version sans installation.
 
-```bat
-pip install pyinstaller
-pyinstaller --onefile --windowed --name GestionSoutien main.py
-```
+Onglet **Actions** du dépôt → dernier run → artefact *GestionSoutien-windows*.
 
-## Lancer depuis les sources
+Construction manuelle sous Windows : `npm ci` puis `npm run dist:win` (résultat dans `release/`).
 
-Python 3.9+ (Tkinter inclus dans l'installateur officiel Windows) :
+## Développement
 
 ```bash
-python main.py
-python -m unittest -v   # tests
+npm install
+npm run electron:dev   # application avec rechargement à chaud
+npm run dev            # interface seule dans le navigateur (données dans localStorage)
+npm test               # tests des calculs
+npm start              # build + lancement Electron
 ```

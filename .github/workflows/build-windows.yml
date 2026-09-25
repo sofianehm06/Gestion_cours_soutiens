@@ -1,4 +1,4 @@
-name: Construire l'exécutable Windows
+name: Construire l'application Windows
 
 on:
   push:
@@ -10,16 +10,17 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
-      - name: Tests
-        run: python -m unittest -v
-      - name: Construire GestionSoutien.exe
-        run: |
-          pip install pyinstaller
-          pyinstaller --onefile --windowed --name GestionSoutien main.py
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Construire l'installateur et la version portable
+        run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - uses: actions/upload-artifact@v4
         with:
           name: GestionSoutien-windows
-          path: dist/GestionSoutien.exe
+          path: release/*.exe

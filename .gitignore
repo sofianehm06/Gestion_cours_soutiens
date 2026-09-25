@@ -1,6 +1,5 @@
-__pycache__/
-*.pyc
-build/
+node_modules/
 dist/
-*.spec
-*.db
+release/
+*.log
+__pycache__/
