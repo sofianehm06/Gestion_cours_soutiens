@@ -36,8 +36,8 @@ Faites régulièrement une sauvegarde (Paramètres → *Faire une sauvegarde*) s
 
 À chaque push, GitHub Actions construit :
 
-- `GestionSoutien-…-nsis.exe` : installateur (crée un raccourci sur le bureau) ;
-- `GestionSoutien-…-portable.exe` : version sans installation.
+- `GestionSoutien-Installation-….exe` : installateur (crée un raccourci sur le bureau) ;
+- `GestionSoutien-Portable-….exe` : version sans installation.
 
 Onglet **Actions** du dépôt → dernier run → artefact *GestionSoutien-windows*.
 

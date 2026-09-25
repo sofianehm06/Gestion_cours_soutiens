@@ -29,14 +29,17 @@
       "target": [
         "nsis",
         "portable"
-      ],
-      "artifactName": "GestionSoutien-${version}-${arch}-${target}.${ext}"
+      ]
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Gestion Soutien"
+      "shortcutName": "Gestion Soutien",
+      "artifactName": "GestionSoutien-Installation-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "GestionSoutien-Portable-${version}.${ext}"
     }
   },
   "dependencies": {
