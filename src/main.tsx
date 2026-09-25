@@ -1,11 +1,16 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import "./i18n";
-import "./styles.css";
-import { App } from "./App";
+import App from "./App";
+import { UiProvider } from "./components/ui";
+import "./index.css";
+import { StoreProvider } from "./store";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <UiProvider>
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    </UiProvider>
   </StrictMode>,
 );

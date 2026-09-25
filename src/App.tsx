@@ -1,107 +1,83 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { AppContext, type AppContextValue, type NavParams, type Page } from "./app-context";
-import { Icon, type IconName } from "./components/Icon";
-import { StudentDetail } from "./components/StudentDetail";
-import { DashboardPage } from "./pages/DashboardPage";
-import { GroupsPage } from "./pages/GroupsPage";
-import { StudentsPage } from "./pages/StudentsPage";
-import { AttendancePage } from "./pages/AttendancePage";
-import { PaymentsPage } from "./pages/PaymentsPage";
+import { CalendarCheck, LayoutGrid, Settings, Users, Wallet } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { cx } from "./components/ui";
+import Eleves from "./pages/Eleves";
+import Paiements from "./pages/Paiements";
+import Parametres from "./pages/Parametres";
+import Presence from "./pages/Presence";
+import TableauDeBord from "./pages/TableauDeBord";
+import { useStore } from "./store";
 
-const NAV: { page: Page; icon: IconName }[] = [
-  { page: "dashboard", icon: "dashboard" },
-  { page: "groups", icon: "groups" },
-  { page: "students", icon: "students" },
-  { page: "attendance", icon: "attendance" },
-  { page: "payments", icon: "payments" },
+export type Page = "tableau" | "presence" | "eleves" | "paiements" | "parametres";
+export type Aller = (p: Page, eleveId?: string) => void;
+
+const MENU: { id: Page; libelle: string; icone: ReactNode }[] = [
+  { id: "tableau", libelle: "Tableau de bord", icone: <LayoutGrid size={18} /> },
+  { id: "presence", libelle: "Présence", icone: <CalendarCheck size={18} /> },
+  { id: "eleves", libelle: "Élèves", icone: <Users size={18} /> },
+  { id: "paiements", libelle: "Paiements", icone: <Wallet size={18} /> },
+  { id: "parametres", libelle: "Paramètres", icone: <Settings size={18} /> },
 ];
 
-interface Toast {
-  id: number;
-  message: string;
-  kind: "success" | "error";
-}
-
-export function App() {
-  const { t, i18n } = useTranslation();
-  const [page, setPage] = useState<Page>("dashboard");
-  const [params, setParams] = useState<NavParams>({});
-  // Change à chaque navigation pour réinitialiser l'écran affiché.
-  const [navKey, setNavKey] = useState(0);
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const [detailStudent, setDetailStudent] = useState<number | null>(null);
-  const toastId = useRef(0);
-
-  const notify = useCallback((message: string, kind: "success" | "error" = "success") => {
-    const id = ++toastId.current;
-    setToasts((list) => [...list, { id, message, kind }]);
-    setTimeout(() => setToasts((list) => list.filter((toast) => toast.id !== id)), kind === "error" ? 6000 : 2500);
-  }, []);
-
-  const navigate = useCallback((next: Page, nextParams: NavParams = {}) => {
-    setPage(next);
-    setParams(nextParams);
-    setNavKey((k) => k + 1);
-  }, []);
-
-  const context = useMemo<AppContextValue>(
-    () => ({ page, params, navigate, notify, openStudent: setDetailStudent }),
-    [page, params, navigate, notify],
-  );
-
-  const toggleLanguage = () => void i18n.changeLanguage(i18n.language === "ar" ? "fr" : "ar");
+export default function App() {
+  const { donnees, bilans } = useStore();
+  const [page, setPage] = useState<Page>("presence");
+  const [eleveOuvert, setEleveOuvert] = useState<string | undefined>();
+  const p = donnees.parametres;
+  const aller: Aller = (nouvelle, eleveId) => {
+    setPage(nouvelle);
+    setEleveOuvert(eleveId);
+  };
+  const nbDoivent = bilans.filter((b) => b.eleve.actif && b.reste > 0.5).length;
+  const prof = p.nomProf.trim() || "Enseignant(e)";
 
   return (
-    <AppContext.Provider value={context}>
-      <div className="layout">
-        <aside className="sidebar">
-          <div className="brand">
-            <div className="brand-logo">S</div>
-            <div>
-              <div className="brand-name">{t("app.name")}</div>
-              <div className="brand-tagline">{t("app.tagline")}</div>
-            </div>
+    <div className="flex h-full">
+      <aside className="sombre flex w-[244px] shrink-0 flex-col bg-brun-800 px-3 py-5 text-creme">
+        <div className="flex items-center gap-3 px-2">
+          <div className="grid size-10 place-items-center rounded-full bg-orange text-lg font-extrabold text-brun-900">
+            {(p.nomEtablissement.trim()[0] ?? "S").toUpperCase()}
           </div>
-          <nav>
-            {NAV.map((item) => (
-              <button
-                key={item.page}
-                type="button"
-                className={`nav-item ${page === item.page ? "active" : ""}`}
-                onClick={() => navigate(item.page)}
-              >
-                <Icon name={item.icon} />
-                <span>{t(`nav.${item.page}`)}</span>
-              </button>
-            ))}
-          </nav>
-          <button type="button" className="lang-switch" onClick={toggleLanguage} title={t("common.language")}>
-            <Icon name="globe" size={16} />
-            <span>{i18n.language === "ar" ? "Français" : "العربية"}</span>
-          </button>
-        </aside>
-
-        <main className="content" key={navKey}>
-          {!window.api && <div className="alert alert-error">{t("errors.noElectron")}</div>}
-          {page === "dashboard" && <DashboardPage />}
-          {page === "groups" && <GroupsPage />}
-          {page === "students" && <StudentsPage />}
-          {page === "attendance" && <AttendancePage />}
-          {page === "payments" && <PaymentsPage />}
-        </main>
-      </div>
-
-      {detailStudent !== null && <StudentDetail studentId={detailStudent} onClose={() => setDetailStudent(null)} />}
-
-      <div className="toasts">
-        {toasts.map((toast) => (
-          <div key={toast.id} className={`toast toast-${toast.kind}`}>
-            <Icon name={toast.kind === "error" ? "warning" : "check"} size={16} />
-            {toast.message}
+          <div className="min-w-0">
+            <div className="truncate text-[15px] font-bold">{p.nomEtablissement || "Cours de soutien"}</div>
+            <div className="text-xs text-brun-300">Cours de soutien</div>
           </div>
-        ))}
-      </div>
-    </AppContext.Provider>
+        </div>
+        <nav className="mt-8 flex flex-col gap-1">
+          {MENU.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => aller(m.id)}
+              className={cx(
+                "flex h-11 items-center gap-3 rounded-full px-4 text-sm font-medium transition cursor-pointer",
+                page === m.id ? "bg-vert text-white shadow-md shadow-black/20" : "text-creme/85 hover:bg-brun-700",
+              )}
+            >
+              {m.icone}
+              <span className="flex-1 text-left">{m.libelle}</span>
+              {m.id === "eleves" && nbDoivent > 0 && (
+                <span className={cx("rounded-full px-2 text-[11px] font-bold", page === m.id ? "bg-white/20" : "bg-rouge text-white")}>{nbDoivent}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+        <div className="mt-auto flex items-center gap-3 rounded-2xl bg-brun-700/70 p-3">
+          <div className="grid size-10 place-items-center rounded-full bg-rouge text-sm font-bold text-white">
+            {prof.split(/\s+/).map((m) => m[0]).join("").slice(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold">{prof}</div>
+            <div className="text-xs text-brun-300">Enseignante</div>
+          </div>
+        </div>
+      </aside>
+      <main className="min-w-0 flex-1 overflow-hidden">
+        {page === "tableau" && <TableauDeBord aller={aller} />}
+        {page === "presence" && <Presence />}
+        {page === "eleves" && <Eleves eleveInitial={eleveOuvert} />}
+        {page === "paiements" && <Paiements />}
+        {page === "parametres" && <Parametres />}
+      </main>
+    </div>
   );
 }
