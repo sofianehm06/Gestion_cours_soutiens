@@ -20,7 +20,7 @@ générées par Lovable), emballées en application de bureau avec **Electron**.
 | **Élèves** | Tableau avec filtres (actifs / doivent / à jour / inactifs), filtre par groupe et recherche. Un clic ouvre la fiche : dû, payé, reste, historique des séances et paiements, encaisser, ajouter une séance, modifier, archiver, supprimer. |
 | **Groupes** | Les groupes sont aussi listés dans le menu de gauche (« Mes groupes ») : un clic lance l'appel du groupe, le **+** en crée un nouveau. Sur la page : créer des groupes (nom + horaire, ex. « 4AM Maths – samedi 14h »), y ajouter / retirer des élèves, voir l'effectif, les séances du mois et le reste à encaisser du groupe, *Faire l'appel* du groupe. Supprimer un groupe ne supprime pas ses élèves. |
 | **Paiements** | Paiements mois par mois, total encaissé. |
-| **Paramètres** | Nom affiché, tarif, export Excel (CSV), sauvegarde / restauration. |
+| **Paramètres** | Nom affiché, tarif, export Excel (CSV), sauvegarde / restauration. **Fin d'année** : *Remettre les compteurs à zéro* (efface séances et paiements, garde élèves et groupes) ou *Tout supprimer* ; une sauvegarde est faite juste avant et il faut taper SUPPRIMER pour confirmer. |
 
 ## Données
 

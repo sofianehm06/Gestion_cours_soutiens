@@ -1,7 +1,7 @@
-import { Download, FileSpreadsheet, FolderOpen, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, FolderOpen, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Entete from "../components/Entete";
-import { Bouton, Carte, Champ, useUi } from "../components/ui";
+import { Bouton, Carte, Champ, Modale, cx, useUi } from "../components/ui";
 import { exporterCsv } from "../lib/calculs";
 import { aujourdhui, da } from "../lib/format";
 import { enregistrerFichier, estElectron, ouvrirFichier } from "../lib/stockage";
@@ -13,6 +13,7 @@ export default function Parametres() {
   const p = store.donnees.parametres;
   const [f, setF] = useState({ nomEtablissement: p.nomEtablissement, nomProf: p.nomProf, tarif: String(p.tarifMensuel), nb: String(p.seancesParMois) });
   const [dossier, setDossier] = useState("");
+  const [reinit, setReinit] = useState<"historique" | "tout" | null>(null);
   useEffect(() => { window.api?.dossier().then(setDossier); }, []);
 
   const tarif = Number(f.tarif.replace(/\s/g, ""));
@@ -81,16 +82,82 @@ export default function Parametres() {
               {estElectron() && <Action icone={<FolderOpen size={18} />} titre="Ouvrir le dossier des données" texte={dossier} onClick={() => window.api?.ouvrirDossier()} />}
             </div>
           </Carte>
+
+          <Carte className="col-span-2 border-rouge/30 p-6">
+            <h2 className="text-[17px] font-bold">Fin d'année / nouvelle année</h2>
+            <p className="mt-1 text-sm text-brun-400">
+              Pour repartir à zéro. Une sauvegarde est proposée juste avant, pour pouvoir tout récupérer si besoin
+              (Restaurer une sauvegarde). Les paramètres (nom, tarif) sont toujours conservés.
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <Action icone={<RotateCcw size={18} />} titre="Remettre les compteurs à zéro" texte="Efface séances et paiements · garde élèves et groupes" onClick={() => setReinit("historique")} danger />
+              <Action icone={<Trash2 size={18} />} titre="Tout supprimer" texte="Efface élèves, groupes, séances et paiements" onClick={() => setReinit("tout")} danger />
+            </div>
+          </Carte>
         </div>
       </div>
+      {reinit && <DialogueReinit mode={reinit} onFermer={() => setReinit(null)} />}
     </div>
   );
 }
 
-function Action({ icone, titre, texte, onClick }: { icone: ReactNode; titre: string; texte: string; onClick(): void }) {
+function DialogueReinit({ mode, onFermer }: { mode: "historique" | "tout"; onFermer(): void }) {
+  const store = useStore();
+  const { notifier } = useUi();
+  const [sauvegarde, setSauvegarde] = useState(true);
+  const [saisie, setSaisie] = useState("");
+  const d = store.donnees;
+  const valide = saisie.trim().toUpperCase() === "SUPPRIMER";
+  const efface = mode === "tout"
+    ? [`${d.eleves.length} élève(s)`, `${d.groupes.length} groupe(s)`, `${d.seances.length} séance(s)`, `${d.paiements.length} paiement(s)`]
+    : [`${d.seances.length} séance(s)`, `${d.paiements.length} paiement(s)`];
+
+  async function valider() {
+    if (!valide) return;
+    if (sauvegarde) {
+      const ok = await enregistrerFichier(`sauvegarde_soutien_${aujourdhui()}.json`, JSON.stringify(d, null, 2), [{ name: "Sauvegarde", extensions: ["json"] }]);
+      if (!ok) {
+        notifier("Sauvegarde annulée : rien n'a été supprimé", "erreur");
+        return;
+      }
+    }
+    store.reinitialiser(mode);
+    notifier(mode === "tout" ? "Toutes les données ont été supprimées" : "Séances et paiements remis à zéro");
+    onFermer();
+  }
+
   return (
-    <button onClick={onClick} className="flex items-center gap-4 rounded-2xl bg-creme-200/70 px-4 py-3 text-left transition hover:bg-creme-200 cursor-pointer">
-      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-vert">{icone}</span>
+    <Modale
+      titre={mode === "tout" ? "Tout supprimer ?" : "Remettre les compteurs à zéro ?"}
+      sousTitre="Cette action est définitive"
+      onFermer={onFermer}
+      largeur={460}
+      pied={
+        <>
+          <Bouton onClick={onFermer}>Annuler</Bouton>
+          <Bouton variante="danger" disabled={!valide} onClick={valider}>{sauvegarde ? "Sauvegarder puis supprimer" : "Supprimer"}</Bouton>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4 text-sm text-brun-600">
+        <div className="rounded-2xl bg-rouge-100 px-4 py-3 text-rouge">
+          Seront supprimés : <span className="font-semibold">{efface.join(", ")}</span>.
+          {mode === "historique" && <> Les élèves et les groupes sont gardés, avec un solde remis à 0.</>}
+        </div>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={sauvegarde} onChange={(e) => setSauvegarde(e.target.checked)} className="size-4 accent-[var(--color-vert)]" />
+          Faire une sauvegarde avant (recommandé)
+        </label>
+        <Champ label="Pour confirmer, tapez SUPPRIMER" value={saisie} onChange={(e) => setSaisie(e.target.value)} autoFocus />
+      </div>
+    </Modale>
+  );
+}
+
+function Action({ icone, titre, texte, onClick, danger }: { icone: ReactNode; titre: string; texte: string; onClick(): void; danger?: boolean }) {
+  return (
+    <button onClick={onClick} className={cx("flex items-center gap-4 rounded-2xl px-4 py-3 text-left transition cursor-pointer", danger ? "bg-rouge-100/60 hover:bg-rouge-100" : "bg-creme-200/70 hover:bg-creme-200")}>
+      <span className={cx("grid size-10 shrink-0 place-items-center rounded-full bg-white", danger ? "text-rouge" : "text-vert")}>{icone}</span>
       <span className="min-w-0">
         <span className="block text-sm font-semibold">{titre}</span>
         <span className="block truncate text-xs text-brun-400">{texte}</span>
