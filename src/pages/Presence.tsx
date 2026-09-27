@@ -2,13 +2,15 @@ import { Check, ChevronLeft, ChevronRight, UserPlus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import Entete, { Recherche } from "../components/Entete";
 import { DialogueEleve } from "../components/dialogues";
+import { ChoixGroupe } from "../components/groupes";
 import { Avatar, BarreMois, Bouton, cx, useUi } from "../components/ui";
-import { correspond, prixSeance, progressionMois } from "../lib/calculs";
+import { correspond, dansGroupe, prixSeance, progressionMois, SANS_GROUPE } from "../lib/calculs";
 import { aujourdhui, da, dateCourte, dateLongue, decaler } from "../lib/format";
 import { useStore } from "../store";
 
-export default function Presence() {
+export default function Presence({ groupeInitial = "" }: { groupeInitial?: string }) {
   const store = useStore();
+  const [groupe, setGroupe] = useState(groupeInitial);
   const { notifier, confirmer } = useUi();
   const [date, setDate] = useState(aujourdhui());
   const [recherche, setRecherche] = useState("");
@@ -37,10 +39,16 @@ export default function Presence() {
     setDate(nouvelle);
   }
 
-  const visibles = store.bilans.filter(
-    (b) => (b.eleve.actif || enregistres.has(b.eleve.id)) && correspond(b.eleve, recherche),
+  const groupeChoisi = groupe && groupe !== SANS_GROUPE ? store.groupeDe(groupe) : undefined;
+  const duGroupe = store.bilans.filter(
+    (b) => (b.eleve.actif || enregistres.has(b.eleve.id)) && dansGroupe(b.eleve, groupe),
   );
+  const visibles = duGroupe.filter((b) => correspond(b.eleve, recherche));
   const presents = store.bilans.filter((b) => coches.has(b.eleve.id));
+  const presentsDuGroupe = duGroupe.filter((b) => coches.has(b.eleve.id));
+  // Élèves cochés dans d'autres groupes (même date) : on les signale dans le panneau.
+  const autres = presents.length - presentsDuGroupe.length;
+  const effectif = groupe ? duGroupe.filter((b) => b.eleve.actif).length : store.bilans.filter((b) => b.eleve.actif).length;
 
   function basculer(id: string) {
     setCoches((c) => {
@@ -75,12 +83,13 @@ export default function Presence() {
         {/* Grille des élèves */}
         <section className="flex min-w-0 flex-1 flex-col rounded-[28px] border border-creme-300/70 bg-creme-100">
           <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-5">
-            <h2 className="text-[17px] font-bold">Élèves</h2>
+            <h2 className="text-[17px] font-bold">{groupeChoisi ? groupeChoisi.nom : groupe === SANS_GROUPE ? "Sans groupe" : "Élèves"}</h2>
             <div className="flex items-center gap-2">
               <Recherche valeur={recherche} onChange={setRecherche} placeholder="Nom ou prénom…" className="w-60" />
               <Bouton taille="sm" variante="fantome" onClick={() => setCoches(new Set([...coches, ...visibles.map((b) => b.eleve.id)]))}>Tout cocher</Bouton>
             </div>
           </div>
+          <div className="px-5 pb-3"><ChoixGroupe valeur={groupe} onChange={setGroupe} /></div>
           <div className="grid flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3 overflow-auto px-5 pb-5">
             {visibles.map((b) => {
               const actif = coches.has(b.eleve.id);
@@ -142,7 +151,10 @@ export default function Presence() {
                     <Avatar nom={b.eleve.nom} prenom={b.eleve.prenom} taille={32} />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-semibold">{b.eleve.nom} {b.eleve.prenom}</div>
-                      <div className="text-xs text-brun-300">{enregistres.has(b.eleve.id) ? "enregistré" : "nouveau"}</div>
+                      <div className="truncate text-xs text-brun-300">
+                        {enregistres.has(b.eleve.id) ? "enregistré" : "nouveau"}
+                        {store.groupeDe(b.eleve.groupeId) ? ` · ${store.groupeDe(b.eleve.groupeId)!.nom}` : ""}
+                      </div>
                     </div>
                     <span className="text-sm font-semibold text-brun-300">{da(prix)}</span>
                     <button onClick={() => basculer(b.eleve.id)} className="grid size-7 place-items-center rounded-full text-brun-300 hover:bg-brun-600 hover:text-creme cursor-pointer" title="Retirer">
@@ -155,9 +167,15 @@ export default function Presence() {
           </div>
           <div className="border-t border-brun-600 px-6 pb-6 pt-4">
             <div className="flex items-center justify-between text-sm text-brun-300">
-              <span>Présents</span>
-              <span className="font-semibold text-creme">{coches.size} / {store.bilans.filter((b) => b.eleve.actif).length}</span>
+              <span>Présents{groupeChoisi ? ` · ${groupeChoisi.nom}` : groupe === SANS_GROUPE ? " · sans groupe" : ""}</span>
+              <span className="font-semibold text-creme">{groupe ? presentsDuGroupe.length : coches.size} / {effectif}</span>
             </div>
+            {groupe && autres > 0 && (
+              <div className="mt-1 flex items-center justify-between text-sm text-brun-300">
+                <span>Autres groupes ce jour</span>
+                <span className="font-semibold text-creme">{autres}</span>
+              </div>
+            )}
             <div className="mt-1 flex items-center justify-between text-sm text-brun-300">
               <span>Prix d'une séance</span>
               <span className="font-semibold text-creme">{da(prix)}</span>
@@ -175,7 +193,7 @@ export default function Presence() {
           </div>
         </aside>
       </div>
-      {nouvelEleve && <DialogueEleve onFermer={() => setNouvelEleve(false)} onCree={(id) => setCoches((c) => new Set([...c, id]))} />}
+      {nouvelEleve && <DialogueEleve groupeInitial={groupe === SANS_GROUPE ? "" : groupe} onFermer={() => setNouvelEleve(false)} onCree={(id) => setCoches((c) => new Set([...c, id]))} />}
     </div>
   );
 }

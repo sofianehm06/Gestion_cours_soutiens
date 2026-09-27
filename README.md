@@ -17,8 +17,9 @@ générées par Lovable), emballées en application de bureau avec **Electron**.
 | Écran | Rôle |
 |---|---|
 | **Tableau de bord** | Élèves actifs, séances et encaissements du mois, reste à encaisser, liste des élèves qui doivent (bouton *Encaisser*), présence des dernières séances, derniers paiements. |
-| **Présence** | On choisit la date, on clique sur les cartes des élèves présents (le panneau de droite récapitule la séance), puis *Enregistrer la présence*. On peut revenir sur une date pour corriger. |
-| **Élèves** | Tableau avec filtres (actifs / doivent / à jour / inactifs) et recherche. Un clic ouvre la fiche : dû, payé, reste, historique des séances et paiements, encaisser, ajouter une séance, modifier, archiver, supprimer. |
+| **Présence** | On choisit la date (et éventuellement un groupe), on clique sur les cartes des élèves présents (le panneau de droite récapitule la séance), puis *Enregistrer la présence*. On peut revenir sur une date pour corriger. |
+| **Élèves** | Tableau avec filtres (actifs / doivent / à jour / inactifs), filtre par groupe et recherche. Un clic ouvre la fiche : dû, payé, reste, historique des séances et paiements, encaisser, ajouter une séance, modifier, archiver, supprimer. |
+| **Groupes** | Créer des groupes (nom + horaire, ex. « 4AM Maths – samedi 14h »), y ajouter / retirer des élèves, voir l'effectif, les séances du mois et le reste à encaisser du groupe, *Faire l'appel* du groupe. Supprimer un groupe ne supprime pas ses élèves. |
 | **Paiements** | Paiements mois par mois, total encaissé. |
 | **Paramètres** | Nom affiché, tarif, export Excel (CSV), sauvegarde / restauration. |
 

@@ -1,4 +1,4 @@
-import type { Bilan, Donnees, Parametres } from "./types";
+import type { Bilan, Donnees, Eleve, Parametres } from "./types";
 
 export const PARAMETRES_DEFAUT: Parametres = {
   nomEtablissement: "Cours de soutien",
@@ -8,7 +8,7 @@ export const PARAMETRES_DEFAUT: Parametres = {
 };
 
 export function donneesVides(): Donnees {
-  return { version: 1, parametres: { ...PARAMETRES_DEFAUT }, eleves: [], seances: [], paiements: [] };
+  return { version: 1, parametres: { ...PARAMETRES_DEFAUT }, groupes: [], eleves: [], seances: [], paiements: [] };
 }
 
 /** Complète des données chargées (anciennes versions, sauvegarde partielle…). */
@@ -17,10 +17,14 @@ export function normaliser(brut: unknown): Donnees {
   if (!Array.isArray(d.eleves) || !Array.isArray(d.seances) || !Array.isArray(d.paiements)) {
     throw new Error("Fichier de données invalide.");
   }
+  const groupes = Array.isArray(d.groupes) ? d.groupes : [];
+  const idsGroupes = new Set(groupes.map((g) => g.id));
   return {
     version: 1,
     parametres: { ...PARAMETRES_DEFAUT, ...(d.parametres ?? {}) },
-    eleves: d.eleves,
+    groupes,
+    // Anciennes données : pas de groupe. Groupe disparu : l'élève repasse « sans groupe ».
+    eleves: d.eleves.map((e) => ({ ...e, groupeId: e.groupeId && idsGroupes.has(e.groupeId) ? e.groupeId : "" })),
     seances: d.seances,
     paiements: d.paiements,
   };
@@ -98,11 +102,25 @@ export function statsMois(d: Donnees, mois: string) {
   };
 }
 
+/** Filtre de groupe : "" = tous, SANS_GROUPE = élèves sans groupe, sinon id du groupe. */
+export const SANS_GROUPE = "__sans__";
+
+export function dansGroupe(eleve: Pick<Eleve, "groupeId">, filtre: string): boolean {
+  if (!filtre) return true;
+  if (filtre === SANS_GROUPE) return !eleve.groupeId;
+  return eleve.groupeId === filtre;
+}
+
+export function comparerGroupes(a: { nom: string }, b: { nom: string }) {
+  return a.nom.localeCompare(b.nom, "fr", { sensitivity: "base", numeric: true });
+}
+
 export function exporterCsv(d: Donnees): string {
-  const lignes = [["Nom", "Prénom", "Téléphone", "Niveau", "Actif", "Séances", "Montant dû (DA)", "Payé (DA)", "Reste (DA)"]];
+  const groupes = new Map(d.groupes.map((g) => [g.id, g.nom]));
+  const lignes = [["Nom", "Prénom", "Téléphone", "Niveau", "Groupe", "Actif", "Séances", "Montant dû (DA)", "Payé (DA)", "Reste (DA)"]];
   for (const b of bilans(d)) {
     lignes.push([
-      b.eleve.nom, b.eleve.prenom, b.eleve.telephone, b.eleve.niveau, b.eleve.actif ? "oui" : "non",
+      b.eleve.nom, b.eleve.prenom, b.eleve.telephone, b.eleve.niveau, groupes.get(b.eleve.groupeId) ?? "", b.eleve.actif ? "oui" : "non",
       String(b.seances), b.du.toFixed(0), b.paye.toFixed(0), b.reste.toFixed(0),
     ]);
   }

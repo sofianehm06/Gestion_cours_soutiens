@@ -3,14 +3,17 @@ import { correspond, prixSeance } from "../lib/calculs";
 import { aujourdhui, da } from "../lib/format";
 import type { Eleve } from "../lib/types";
 import { useStore } from "../store";
+import { SelectGroupe } from "./groupes";
 import { Avatar, Bouton, Champ, Modale, cx, useUi } from "./ui";
 
-export function DialogueEleve({ eleve, onFermer, onCree }: { eleve?: Eleve; onFermer(): void; onCree?(id: string): void }) {
+export function DialogueEleve({ eleve, groupeInitial = "", onFermer, onCree }: { eleve?: Eleve; groupeInitial?: string; onFermer(): void; onCree?(id: string): void }) {
   const store = useStore();
   const { notifier } = useUi();
   const [c, setC] = useState({
     nom: eleve?.nom ?? "", prenom: eleve?.prenom ?? "", telephone: eleve?.telephone ?? "", niveau: eleve?.niveau ?? "",
+    groupeId: eleve?.groupeId ?? groupeInitial,
   });
+  const avecGroupes = store.donnees.groupes.length > 0;
   const valide = c.nom.trim() && c.prenom.trim();
 
   function valider(e: FormEvent) {
@@ -18,7 +21,7 @@ export function DialogueEleve({ eleve, onFermer, onCree }: { eleve?: Eleve; onFe
     if (!valide) return;
     if (eleve) {
       store.modifierEleve(eleve.id, {
-        nom: c.nom.trim(), prenom: c.prenom.trim(), telephone: c.telephone.trim(), niveau: c.niveau.trim(),
+        nom: c.nom.trim(), prenom: c.prenom.trim(), telephone: c.telephone.trim(), niveau: c.niveau.trim(), groupeId: c.groupeId,
       });
       notifier("Élève modifié");
     } else {
@@ -36,6 +39,7 @@ export function DialogueEleve({ eleve, onFermer, onCree }: { eleve?: Eleve; onFe
         <Champ label="Prénom *" value={c.prenom} onChange={(e) => setC({ ...c, prenom: e.target.value })} />
         <Champ label="Téléphone (parent)" value={c.telephone} onChange={(e) => setC({ ...c, telephone: e.target.value })} placeholder="0550 12 34 56" />
         <Champ label="Niveau / classe" value={c.niveau} onChange={(e) => setC({ ...c, niveau: e.target.value })} placeholder="ex. 4AM" />
+        {avecGroupes && <div className="col-span-2"><SelectGroupe label="Groupe" value={c.groupeId} onChange={(groupeId) => setC({ ...c, groupeId })} /></div>}
         <div className="col-span-2 mt-2 flex justify-end gap-2">
           <Bouton type="button" onClick={onFermer}>Annuler</Bouton>
           <Bouton type="submit" variante="vert" disabled={!valide}>{eleve ? "Enregistrer" : "Ajouter l'élève"}</Bouton>

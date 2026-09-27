@@ -1,20 +1,23 @@
-import { CalendarCheck, LayoutGrid, Settings, Users, Wallet } from "lucide-react";
+import { CalendarCheck, LayoutGrid, Settings, Users, UsersRound, Wallet } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cx } from "./components/ui";
 import Eleves from "./pages/Eleves";
+import Groupes from "./pages/Groupes";
 import Paiements from "./pages/Paiements";
 import Parametres from "./pages/Parametres";
 import Presence from "./pages/Presence";
 import TableauDeBord from "./pages/TableauDeBord";
 import { useStore } from "./store";
 
-export type Page = "tableau" | "presence" | "eleves" | "paiements" | "parametres";
-export type Aller = (p: Page, eleveId?: string) => void;
+export type Page = "tableau" | "presence" | "eleves" | "groupes" | "paiements" | "parametres";
+/** `cible` : l'élève à ouvrir (page Élèves) ou le groupe à appeler (page Présence). */
+export type Aller = (p: Page, cible?: string) => void;
 
 const MENU: { id: Page; libelle: string; icone: ReactNode }[] = [
   { id: "tableau", libelle: "Tableau de bord", icone: <LayoutGrid size={18} /> },
   { id: "presence", libelle: "Présence", icone: <CalendarCheck size={18} /> },
   { id: "eleves", libelle: "Élèves", icone: <Users size={18} /> },
+  { id: "groupes", libelle: "Groupes", icone: <UsersRound size={18} /> },
   { id: "paiements", libelle: "Paiements", icone: <Wallet size={18} /> },
   { id: "parametres", libelle: "Paramètres", icone: <Settings size={18} /> },
 ];
@@ -22,11 +25,13 @@ const MENU: { id: Page; libelle: string; icone: ReactNode }[] = [
 export default function App() {
   const { donnees, bilans } = useStore();
   const [page, setPage] = useState<Page>("presence");
-  const [eleveOuvert, setEleveOuvert] = useState<string | undefined>();
+  const [cible, setCible] = useState<string | undefined>();
+  const [visite, setVisite] = useState(0);
   const p = donnees.parametres;
-  const aller: Aller = (nouvelle, eleveId) => {
+  const aller: Aller = (nouvelle, c) => {
     setPage(nouvelle);
-    setEleveOuvert(eleveId);
+    setCible(c);
+    if (c) setVisite((v) => v + 1); // remonte la page pour qu'elle prenne en compte la nouvelle cible
   };
   const nbDoivent = bilans.filter((b) => b.eleve.actif && b.reste > 0.5).length;
   const prof = p.nomProf.trim() || "Enseignant(e)";
@@ -73,8 +78,9 @@ export default function App() {
       </aside>
       <main className="min-w-0 flex-1 overflow-hidden">
         {page === "tableau" && <TableauDeBord aller={aller} />}
-        {page === "presence" && <Presence />}
-        {page === "eleves" && <Eleves eleveInitial={eleveOuvert} />}
+        {page === "presence" && <Presence key={visite} groupeInitial={cible} />}
+        {page === "eleves" && <Eleves key={visite} eleveInitial={cible} />}
+        {page === "groupes" && <Groupes aller={aller} />}
         {page === "paiements" && <Paiements />}
         {page === "parametres" && <Parametres />}
       </main>

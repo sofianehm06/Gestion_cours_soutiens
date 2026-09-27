@@ -1,9 +1,10 @@
-import { Archive, CalendarPlus, Pencil, Phone, Plus, RotateCcw, Trash2, Wallet, X } from "lucide-react";
+import { Archive, CalendarPlus, Pencil, Phone, Plus, RotateCcw, Trash2, UsersRound, Wallet, X } from "lucide-react";
 import { useState } from "react";
 import Entete, { Recherche } from "../components/Entete";
 import { DialogueEleve, DialoguePaiement, DialogueSeance } from "../components/dialogues";
+import { ChoixGroupe } from "../components/groupes";
 import { Avatar, BarreMois, Bouton, Pastille, PastilleReste, cx, useUi } from "../components/ui";
-import { correspond, detailSeances, progressionMois, statut } from "../lib/calculs";
+import { correspond, dansGroupe, detailSeances, progressionMois, SANS_GROUPE, statut } from "../lib/calculs";
 import { da, dateCourte } from "../lib/format";
 import { useStore } from "../store";
 
@@ -13,18 +14,21 @@ export default function Eleves({ eleveInitial }: { eleveInitial?: string }) {
   const store = useStore();
   const [recherche, setRecherche] = useState("");
   const [filtre, setFiltre] = useState<Filtre>("tous");
+  const [groupe, setGroupe] = useState("");
   const [ouvert, setOuvert] = useState<string | undefined>(eleveInitial);
   const [nouveau, setNouveau] = useState(false);
   const parMois = store.donnees.parametres.seancesParMois;
 
   const actifs = store.bilans.filter((b) => b.eleve.actif);
+  const duGroupe = store.bilans.filter((b) => dansGroupe(b.eleve, groupe));
+  const actifsDuGroupe = duGroupe.filter((b) => b.eleve.actif);
   const compte = {
-    tous: actifs.length,
-    doit: actifs.filter((b) => statut(b.reste) === "doit").length,
-    ajour: actifs.filter((b) => statut(b.reste) !== "doit").length,
-    inactifs: store.bilans.length - actifs.length,
+    tous: actifsDuGroupe.length,
+    doit: actifsDuGroupe.filter((b) => statut(b.reste) === "doit").length,
+    ajour: actifsDuGroupe.filter((b) => statut(b.reste) !== "doit").length,
+    inactifs: duGroupe.length - actifsDuGroupe.length,
   };
-  const liste = store.bilans.filter((b) => {
+  const liste = duGroupe.filter((b) => {
     if (!correspond(b.eleve, recherche)) return false;
     if (filtre === "inactifs") return !b.eleve.actif;
     if (!b.eleve.actif) return false;
@@ -33,12 +37,13 @@ export default function Eleves({ eleveInitial }: { eleveInitial?: string }) {
     return true;
   });
   const totalReste = actifs.reduce((t, b) => t + Math.max(b.reste, 0), 0);
+  const nomGroupe = (id: string) => store.groupeDe(id)?.nom;
 
   const FILTRES: [Filtre, string][] = [["tous", "Actifs"], ["doit", "Doivent"], ["ajour", "À jour"], ["inactifs", "Inactifs"]];
 
   return (
     <div className="flex h-full flex-col">
-      <Entete titre="Élèves" sousTitre={`${compte.tous} élève(s) actif(s) · ${da(totalReste)} restant à encaisser`}>
+      <Entete titre="Élèves" sousTitre={`${actifs.length} élève(s) actif(s) · ${da(totalReste)} restant à encaisser`}>
         <Recherche valeur={recherche} onChange={setRecherche} placeholder="Rechercher un élève…" />
         <Bouton variante="vert" onClick={() => setNouveau(true)}><Plus size={16} /> Nouvel élève</Bouton>
       </Entete>
@@ -57,6 +62,7 @@ export default function Eleves({ eleveInitial }: { eleveInitial?: string }) {
               </button>
             ))}
           </div>
+          {store.donnees.groupes.length > 0 && <div className="px-5 pt-3"><ChoixGroupe valeur={groupe} onChange={setGroupe} actifsSeulement={filtre !== "inactifs"} /></div>}
           <div className="mt-3 min-h-0 flex-1 overflow-auto px-3 pb-3">
             <table className="w-full border-separate border-spacing-y-1 text-sm whitespace-nowrap">
               <thead className="sticky top-0 z-10 bg-creme-100 text-left text-xs text-brun-400">
@@ -79,7 +85,7 @@ export default function Eleves({ eleveInitial }: { eleveInitial?: string }) {
                           <Avatar nom={b.eleve.nom} prenom={b.eleve.prenom} taille={36} />
                           <div>
                             <div className="font-semibold">{b.eleve.nom} {b.eleve.prenom}</div>
-                            <div className="max-w-44 truncate text-xs text-brun-400">{[b.eleve.niveau, b.eleve.telephone].filter(Boolean).join(" · ") || "—"}</div>
+                            <div className="max-w-44 truncate text-xs text-brun-400">{[nomGroupe(b.eleve.groupeId), b.eleve.niveau, b.eleve.telephone].filter(Boolean).join(" · ") || "—"}</div>
                           </div>
                         </div>
                       </td>
@@ -106,7 +112,7 @@ export default function Eleves({ eleveInitial }: { eleveInitial?: string }) {
 
         {ouvert && store.bilanDe(ouvert) && <Fiche key={ouvert} eleveId={ouvert} onFermer={() => setOuvert(undefined)} />}
       </div>
-      {nouveau && <DialogueEleve onFermer={() => setNouveau(false)} onCree={setOuvert} />}
+      {nouveau && <DialogueEleve groupeInitial={groupe === SANS_GROUPE ? "" : groupe} onFermer={() => setNouveau(false)} onCree={setOuvert} />}
     </div>
   );
 }
@@ -148,7 +154,8 @@ function Fiche({ eleveId, onFermer }: { eleveId: string; onFermer(): void }) {
           <Avatar nom={e.nom} prenom={e.prenom} taille={54} />
           <div className="min-w-0">
             <div className="truncate text-lg font-bold">{e.nom} {e.prenom}</div>
-            <div className="flex items-center gap-2 text-sm text-brun-300">
+            <div className="flex flex-wrap items-center gap-x-2 text-sm text-brun-300">
+              {store.groupeDe(e.groupeId) && <span className="flex items-center gap-1"><UsersRound size={12} />{store.groupeDe(e.groupeId)!.nom}</span>}
               {e.niveau && <span>{e.niveau}</span>}
               {e.telephone && <span className="flex items-center gap-1"><Phone size={12} />{e.telephone}</span>}
               {!e.actif && <Pastille ton="gris">archivé</Pastille>}

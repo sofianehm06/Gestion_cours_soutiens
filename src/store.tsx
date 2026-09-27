@@ -2,9 +2,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { bilans, donneesVides, normaliser, prixSeance } from "./lib/calculs";
 import { aujourdhui, nouvelId } from "./lib/format";
 import { charger, sauver } from "./lib/stockage";
-import type { Bilan, Donnees, Eleve, Parametres } from "./lib/types";
+import type { Bilan, Donnees, Eleve, Groupe, Parametres } from "./lib/types";
 
-export type ChampsEleve = Pick<Eleve, "nom" | "prenom" | "telephone" | "niveau">;
+export type ChampsEleve = Pick<Eleve, "nom" | "prenom" | "telephone" | "niveau" | "groupeId">;
+export type ChampsGroupe = Pick<Groupe, "nom" | "horaire">;
 
 interface Store {
   donnees: Donnees;
@@ -13,6 +14,11 @@ interface Store {
   ajouterEleve(c: ChampsEleve): string;
   modifierEleve(id: string, c: Partial<Eleve>): void;
   supprimerEleve(id: string): void;
+  groupeDe(id: string): Groupe | undefined;
+  ajouterGroupe(c: ChampsGroupe): string;
+  modifierGroupe(id: string, c: ChampsGroupe): void;
+  supprimerGroupe(id: string): void;
+  affecterGroupe(eleveIds: string[], groupeId: string): void;
   presentsLe(date: string): Set<string>;
   enregistrerPresence(date: string, ids: string[]): void;
   ajouterSeance(eleveId: string, date: string): boolean;
@@ -51,6 +57,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const liste = bilans(donnees);
     const parId = new Map(liste.map((b) => [b.eleve.id, b]));
     const prix = prixSeance(donnees.parametres);
+    const groupes = new Map(donnees.groupes.map((g) => [g.id, g]));
     return {
       donnees,
       bilans: liste,
@@ -59,7 +66,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const id = nouvelId();
         const eleve: Eleve = {
           id, nom: c.nom.trim(), prenom: c.prenom.trim(), telephone: c.telephone.trim(),
-          niveau: c.niveau.trim(), actif: true, dateInscription: aujourdhui(),
+          niveau: c.niveau.trim(), actif: true, dateInscription: aujourdhui(), groupeId: c.groupeId,
         };
         maj((d) => ({ ...d, eleves: [...d.eleves, eleve] }));
         return id;
@@ -74,6 +81,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           seances: d.seances.filter((s) => s.eleveId !== id),
           paiements: d.paiements.filter((p) => p.eleveId !== id),
         }));
+      },
+      groupeDe: (id) => groupes.get(id),
+      ajouterGroupe(c) {
+        const id = nouvelId();
+        maj((d) => ({ ...d, groupes: [...d.groupes, { id, nom: c.nom.trim(), horaire: c.horaire.trim() }] }));
+        return id;
+      },
+      modifierGroupe(id, c) {
+        maj((d) => ({
+          ...d,
+          groupes: d.groupes.map((g) => (g.id === id ? { ...g, nom: c.nom.trim(), horaire: c.horaire.trim() } : g)),
+        }));
+      },
+      supprimerGroupe(id) {
+        // Les élèves du groupe ne sont pas supprimés : ils passent « sans groupe ».
+        maj((d) => ({
+          ...d,
+          groupes: d.groupes.filter((g) => g.id !== id),
+          eleves: d.eleves.map((e) => (e.groupeId === id ? { ...e, groupeId: "" } : e)),
+        }));
+      },
+      affecterGroupe(eleveIds, groupeId) {
+        const ids = new Set(eleveIds);
+        maj((d) => ({ ...d, eleves: d.eleves.map((e) => (ids.has(e.id) ? { ...e, groupeId } : e)) }));
       },
       presentsLe(date) {
         return new Set(donnees.seances.filter((s) => s.date === date).map((s) => s.eleveId));

@@ -6,6 +6,13 @@ export interface Eleve {
   niveau: string;
   actif: boolean;
   dateInscription: string; // AAAA-MM-JJ
+  groupeId: string; // "" = sans groupe
+}
+
+export interface Groupe {
+  id: string;
+  nom: string;
+  horaire: string; // texte libre, ex. « Samedi 14h »
 }
 
 export interface Seance {
@@ -33,6 +40,7 @@ export interface Parametres {
 export interface Donnees {
   version: 1;
   parametres: Parametres;
+  groupes: Groupe[];
   eleves: Eleve[];
   seances: Seance[];
   paiements: Paiement[];
