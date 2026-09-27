@@ -1,10 +1,10 @@
-import { Check, ChevronLeft, ChevronRight, UserPlus, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import Entete, { Recherche } from "../components/Entete";
 import { DialogueEleve } from "../components/dialogues";
 import { ChoixGroupe } from "../components/groupes";
 import { Avatar, BarreMois, Bouton, cx, useUi } from "../components/ui";
-import { correspond, dansGroupe, prixSeance, progressionMois, SANS_GROUPE } from "../lib/calculs";
+import { correspond, dansGroupe, progressionMois, SANS_GROUPE } from "../lib/calculs";
 import { aujourdhui, da, dateCourte, dateLongue, decaler } from "../lib/format";
 import { useStore } from "../store";
 
@@ -17,7 +17,6 @@ export default function Presence({ groupeInitial = "" }: { groupeInitial?: strin
   const [coches, setCoches] = useState<Set<string>>(() => store.presentsLe(aujourdhui()));
   const [nouvelEleve, setNouvelEleve] = useState(false);
   const parMois = store.donnees.parametres.seancesParMois;
-  const prix = prixSeance(store.donnees.parametres);
 
   const enregistres = useMemo(() => store.presentsLe(date), [store, date]);
   const modifie = coches.size !== enregistres.size || [...coches].some((id) => !enregistres.has(id));
@@ -44,10 +43,7 @@ export default function Presence({ groupeInitial = "" }: { groupeInitial?: strin
     (b) => (b.eleve.actif || enregistres.has(b.eleve.id)) && dansGroupe(b.eleve, groupe),
   );
   const visibles = duGroupe.filter((b) => correspond(b.eleve, recherche));
-  const presents = store.bilans.filter((b) => coches.has(b.eleve.id));
   const presentsDuGroupe = duGroupe.filter((b) => coches.has(b.eleve.id));
-  // Élèves cochés dans d'autres groupes (même date) : on les signale dans le panneau.
-  const autres = presents.length - presentsDuGroupe.length;
   const effectif = groupe ? duGroupe.filter((b) => b.eleve.actif).length : store.bilans.filter((b) => b.eleve.actif).length;
 
   function basculer(id: string) {
@@ -133,65 +129,20 @@ export default function Presence({ groupeInitial = "" }: { groupeInitial?: strin
               Nouvel élève
             </button>
           </div>
-        </section>
-
-        {/* Panneau de la séance */}
-        <aside className="sombre flex w-[380px] shrink-0 flex-col rounded-[28px] bg-brun-800 text-creme">
-          <div className="flex items-baseline justify-between px-6 pt-6">
-            <h2 className="text-[17px] font-bold">Séance du jour</h2>
-            <span className="text-sm font-semibold text-brun-300">{dateCourte(date)}</span>
-          </div>
-          <div className="min-h-0 flex-1 overflow-auto px-4 py-4">
-            {presents.length === 0 ? (
-              <p className="px-2 text-sm text-brun-300">Cliquez sur un élève pour le marquer présent.</p>
-            ) : (
-              <ul className="flex flex-col gap-1.5">
-                {presents.map((b) => (
-                  <li key={b.eleve.id} className="anim-glisse flex items-center gap-3 rounded-2xl bg-brun-700/70 px-3 py-2.5">
-                    <Avatar nom={b.eleve.nom} prenom={b.eleve.prenom} taille={32} />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold">{b.eleve.nom} {b.eleve.prenom}</div>
-                      <div className="truncate text-xs text-brun-300">
-                        {enregistres.has(b.eleve.id) ? "enregistré" : "nouveau"}
-                        {store.groupeDe(b.eleve.groupeId) ? ` · ${store.groupeDe(b.eleve.groupeId)!.nom}` : ""}
-                      </div>
-                    </div>
-                    <span className="text-sm font-semibold text-brun-300">{da(prix)}</span>
-                    <button onClick={() => basculer(b.eleve.id)} className="grid size-7 place-items-center rounded-full text-brun-300 hover:bg-brun-600 hover:text-creme cursor-pointer" title="Retirer">
-                      <X size={15} />
-                    </button>
-                  </li>
-                ))}
-              </ul>
+          {/* Barre d'enregistrement */}
+          <div className="flex items-center gap-4 border-t border-creme-300/70 px-5 py-3">
+            <div className="text-sm text-brun-600">
+              Présents{groupeChoisi ? ` · ${groupeChoisi.nom}` : groupe === SANS_GROUPE ? " · sans groupe" : ""} :{" "}
+              <span className="font-bold text-brun-900">{groupe ? presentsDuGroupe.length : coches.size} / {effectif}</span>
+            </div>
+            {modifie && enregistres.size > 0 && (
+              <button onClick={() => setCoches(new Set(enregistres))} className="ml-auto text-xs font-semibold text-brun-400 hover:text-brun-900 cursor-pointer">Annuler les modifications</button>
             )}
-          </div>
-          <div className="border-t border-brun-600 px-6 pb-6 pt-4">
-            <div className="flex items-center justify-between text-sm text-brun-300">
-              <span>Présents{groupeChoisi ? ` · ${groupeChoisi.nom}` : groupe === SANS_GROUPE ? " · sans groupe" : ""}</span>
-              <span className="font-semibold text-creme">{groupe ? presentsDuGroupe.length : coches.size} / {effectif}</span>
-            </div>
-            {groupe && autres > 0 && (
-              <div className="mt-1 flex items-center justify-between text-sm text-brun-300">
-                <span>Autres groupes ce jour</span>
-                <span className="font-semibold text-creme">{autres}</span>
-              </div>
-            )}
-            <div className="mt-1 flex items-center justify-between text-sm text-brun-300">
-              <span>Prix d'une séance</span>
-              <span className="font-semibold text-creme">{da(prix)}</span>
-            </div>
-            <div className="mt-3 flex items-end justify-between">
-              <span className="text-sm text-brun-300">Valeur de la séance</span>
-              <span className="text-3xl font-extrabold text-orange">{da(coches.size * prix)}</span>
-            </div>
-            <Bouton variante="principal" taille="lg" className="mt-5 w-full" disabled={!modifie} onClick={enregistrer}>
+            <Bouton variante="principal" className={cx(!(modifie && enregistres.size > 0) && "ml-auto")} disabled={!modifie} onClick={enregistrer}>
               {modifie ? "Enregistrer la présence" : enregistres.size ? "Présence enregistrée ✓" : "Enregistrer la présence"}
             </Bouton>
-            {modifie && enregistres.size > 0 && (
-              <button onClick={() => setCoches(new Set(enregistres))} className="mt-2 w-full text-center text-xs text-brun-300 hover:text-creme cursor-pointer">Annuler les modifications</button>
-            )}
           </div>
-        </aside>
+        </section>
       </div>
       {nouvelEleve && <DialogueEleve groupeInitial={groupe === SANS_GROUPE ? "" : groupe} onFermer={() => setNouvelEleve(false)} onCree={(id) => setCoches((c) => new Set([...c, id]))} />}
     </div>

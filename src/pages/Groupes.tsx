@@ -7,10 +7,10 @@ import { Avatar, Bouton, PastilleReste, cx, useUi } from "../components/ui";
 import { da, moisCourant } from "../lib/format";
 import { useStore } from "../store";
 
-export default function Groupes({ aller }: { aller: Aller }) {
+export default function Groupes({ aller, groupeInitial }: { aller: Aller; groupeInitial?: string }) {
   const store = useStore();
   const groupes = useGroupes();
-  const [ouvert, setOuvert] = useState<string | undefined>(groupes[0]?.id);
+  const [ouvert, setOuvert] = useState<string | undefined>(groupeInitial ?? groupes[0]?.id);
   const [nouveau, setNouveau] = useState(false);
   const mois = moisCourant();
   const actifs = store.bilans.filter((b) => b.eleve.actif);
