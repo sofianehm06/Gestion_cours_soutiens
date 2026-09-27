@@ -80,6 +80,8 @@ git add electron/cle-publique.cjs && git commit -m "Clé publique des licences" 
 (jamais dans le projet ni sur GitHub). Gardez-la secrète et faites-en une copie sur clé USB : sans
 elle, impossible de fabriquer de nouvelles clés. Tant que `electron/cle-publique.cjs` est vide,
 l'activation est désactivée (le logiciel s'ouvre sans clé).
+Si la clé privée existe déjà (autre dossier, nouveau téléchargement), `npm run licence:publique`
+réécrit `electron/cle-publique.cjs` à partir d'elle.
 
 Pour chaque vente, l'enseignant(e) vous envoie son code, vous lancez :
 

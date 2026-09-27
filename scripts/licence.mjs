@@ -2,6 +2,7 @@
 //
 //   npm run licence:init                              crée la paire de clés (une seule fois)
 //   npm run licence:cle -- 3F2A-91C0-7B5D-E842 "Nom"  fabrique la clé d'activation d'un enseignant
+//   npm run licence:publique                          réécrit electron/cle-publique.cjs depuis la clé privée
 //
 // La clé privée est rangée HORS du projet (dossier personnel) : ne la partagez jamais,
 // ne la mettez jamais sur GitHub. Si vous la perdez, il faudra refaire init et
@@ -18,21 +19,33 @@ const clePubliqueCjs = path.join(path.dirname(fileURLToPath(import.meta.url)), "
 
 const [commande, code, ...nom] = process.argv.slice(2);
 
+/** Écrit la clé publique (déduite de la clé privée) dans electron/cle-publique.cjs et l'affiche. */
+function ecrirePublique() {
+  const pub = crypto.createPublicKey(fs.readFileSync(clePrivee, "utf-8")).export({ type: "spki", format: "pem" });
+  fs.writeFileSync(
+    clePubliqueCjs,
+    `// Clé publique de vérification des licences, écrite par « npm run licence:init ».\n// Vide = activation désactivée (le logiciel fonctionne sans clé).\nmodule.exports = ${JSON.stringify(pub)};\n`,
+  );
+  console.log(`Clé publique écrite dans electron/cle-publique.cjs (elle n'est pas secrète) :\n\n${pub}`);
+  console.log(`Envoyez ce fichier sur GitHub :\n  git add electron/cle-publique.cjs && git commit -m "Clé publique des licences" && git push\n`);
+}
+
 if (commande === "init") {
   if (fs.existsSync(clePrivee)) {
     console.error(`Une clé privée existe déjà : ${clePrivee}\nSupprimez-la d'abord si vous voulez vraiment en créer une nouvelle (les anciennes clés d'activation ne marcheront plus).`);
     process.exit(1);
   }
-  const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
+  const { privateKey } = crypto.generateKeyPairSync("ed25519");
   fs.mkdirSync(dossierPrive, { recursive: true });
   fs.writeFileSync(clePrivee, privateKey.export({ type: "pkcs8", format: "pem" }), { mode: 0o600 });
-  const pub = publicKey.export({ type: "spki", format: "pem" });
-  fs.writeFileSync(
-    clePubliqueCjs,
-    `// Clé publique de vérification des licences, écrite par « npm run licence:init ».\n// Vide = activation désactivée (le logiciel fonctionne sans clé).\nmodule.exports = ${JSON.stringify(pub)};\n`,
-  );
   console.log(`Clé privée enregistrée (GARDEZ-LA SECRÈTE, faites-en une copie sur clé USB) :\n  ${clePrivee}\n`);
-  console.log(`Clé publique écrite dans electron/cle-publique.cjs. Envoyez ce fichier sur GitHub :\n  git add electron/cle-publique.cjs && git commit -m "Clé publique des licences" && git push\n`);
+  ecrirePublique();
+} else if (commande === "publique") {
+  if (!fs.existsSync(clePrivee)) {
+    console.error("Pas de clé privée : lancez d'abord  npm run licence:init");
+    process.exit(1);
+  }
+  ecrirePublique();
 } else if (commande === "cle" && code && nom.length) {
   if (!fs.existsSync(clePrivee)) {
     console.error("Pas de clé privée : lancez d'abord  npm run licence:init");
@@ -47,5 +60,5 @@ if (commande === "init") {
   const signature = crypto.sign(null, Buffer.from(charge), fs.readFileSync(clePrivee, "utf-8")).toString("base64url");
   console.log(`\nClé d'activation pour ${nom.join(" ")} (ordinateur ${m}) :\n\n${charge}.${signature}\n`);
 } else {
-  console.log('Utilisation :\n  npm run licence:init\n  npm run licence:cle -- XXXX-XXXX-XXXX-XXXX "Nom de l\'enseignant"');
+  console.log('Utilisation :\n  npm run licence:init\n  npm run licence:publique\n  npm run licence:cle -- XXXX-XXXX-XXXX-XXXX "Nom de l\'enseignant"');
 }

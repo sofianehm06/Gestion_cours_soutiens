@@ -15,7 +15,8 @@
     "dist:win": "npm run build && electron-builder --win --publish never",
     "test": "vitest run",
     "licence:init": "node scripts/licence.mjs init",
-    "licence:cle": "node scripts/licence.mjs cle"
+    "licence:cle": "node scripts/licence.mjs cle",
+    "licence:publique": "node scripts/licence.mjs publique"
   },
   "build": {
     "appId": "dz.gestion.soutien",
