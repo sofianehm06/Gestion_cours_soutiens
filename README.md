@@ -59,6 +59,37 @@ refaire `npm install` seulement si `package.json` a changé). Pour tester une br
 
 Construction manuelle sous Windows : `npm ci` puis `npm run dist:win` (résultat dans `release/`).
 
+## Vendre le logiciel : premier lancement et licences
+
+**Premier lancement.** Sur un nouvel ordinateur, le logiciel affiche un écran de bienvenue où
+l'enseignant(e) saisit son nom, le nom affiché et son tarif. Pour redonner un ordinateur déjà
+utilisé : Paramètres → *Tout supprimer* en cochant « Effacer aussi le nom de l'enseignant(e) ».
+
+**Activation par clé.** Chaque ordinateur a un code (ex. `3F2A-91C0-7B5D-E842`) affiché sur
+l'écran d'activation. Vous fabriquez une clé pour ce code ; elle ne fonctionne sur aucun autre
+ordinateur, donc un enseignant ne peut pas donner le logiciel à un collègue.
+
+Mise en place, **une seule fois, sur votre ordinateur** (Node.js installé, dans le dossier du projet) :
+
+```bash
+npm run licence:init
+git add electron/cle-publique.cjs && git commit -m "Clé publique des licences" && git push
+```
+
+`licence:init` crée une **clé privée** dans `%USERPROFILE%\.gestion-soutien\cle-privee.pem`
+(jamais dans le projet ni sur GitHub). Gardez-la secrète et faites-en une copie sur clé USB : sans
+elle, impossible de fabriquer de nouvelles clés. Tant que `electron/cle-publique.cjs` est vide,
+l'activation est désactivée (le logiciel s'ouvre sans clé).
+
+Pour chaque vente, l'enseignant(e) vous envoie son code, vous lancez :
+
+```bash
+npm run licence:cle -- 3F2A-91C0-7B5D-E842 "Mme Amrani"
+```
+
+et vous lui renvoyez la clé affichée (par WhatsApp, SMS, e-mail…) ; elle la colle et clique sur *Activer*.
+Si l'enseignant(e) change d'ordinateur, le code change : il faut lui fabriquer une nouvelle clé.
+
 ## Développement
 
 ```bash

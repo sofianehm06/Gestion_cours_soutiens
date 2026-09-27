@@ -35,6 +35,7 @@ export interface Parametres {
   nomProf: string;
   tarifMensuel: number;
   seancesParMois: number;
+  configure: boolean; // false = premier lancement, on affiche l'écran d'accueil
 }
 
 export interface Donnees {

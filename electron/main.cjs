@@ -2,12 +2,27 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const fs = require("fs");
 const path = require("path");
+const licence = require("./licence.cjs");
 
 // Interface et sélecteurs de date en français (JJ/MM/AAAA).
 app.commandLine.appendSwitch("lang", "fr");
 
 const dossierDonnees = () => app.getPath("userData");
 const fichierDonnees = () => path.join(dossierDonnees(), "donnees.json");
+const fichierLicence = () => path.join(dossierDonnees(), "licence.json");
+
+const code = licence.codeMachine();
+
+function etatLicence() {
+  if (!licence.licenceConfiguree) return { requise: false, active: true, code };
+  let infos = null;
+  try {
+    infos = licence.verifier(JSON.parse(fs.readFileSync(fichierLicence(), "utf-8")).cle, code);
+  } catch {
+    /* pas encore de licence */
+  }
+  return { requise: true, active: !!infos, code, nom: infos?.nom };
+}
 
 function lireDonnees() {
   try {
@@ -53,7 +68,15 @@ function creerFenetre() {
 }
 
 ipcMain.handle("donnees:lire", () => lireDonnees());
-ipcMain.handle("donnees:ecrire", (_e, donnees) => ecrireDonnees(donnees));
+ipcMain.handle("donnees:ecrire", (_e, donnees) => (etatLicence().active ? ecrireDonnees(donnees) : false));
+
+ipcMain.handle("licence:etat", () => etatLicence());
+ipcMain.handle("licence:activer", (_e, cle) => {
+  if (!licence.verifier(cle, code)) return false;
+  fs.mkdirSync(dossierDonnees(), { recursive: true });
+  fs.writeFileSync(fichierLicence(), JSON.stringify({ cle: String(cle).replace(/\s+/g, "") }), "utf-8");
+  return true;
+});
 ipcMain.handle("donnees:dossier", () => dossierDonnees());
 ipcMain.handle("donnees:ouvrirDossier", () => shell.openPath(dossierDonnees()));
 

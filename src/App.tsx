@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import { DialogueGroupe, useGroupes } from "./components/groupes";
 import { cx } from "./components/ui";
 import Eleves from "./pages/Eleves";
+import Accueil from "./pages/Accueil";
 import Groupes from "./pages/Groupes";
 import Paiements from "./pages/Paiements";
 import Parametres from "./pages/Parametres";
@@ -36,6 +37,7 @@ export default function App() {
   };
   const nbDoivent = bilans.filter((b) => b.eleve.actif && b.reste > 0.5).length;
   const prof = p.nomProf.trim() || "Enseignant(e)";
+  if (!p.configure) return <Accueil onTermine={() => aller("presence")} />;
 
   return (
     <div className="flex h-full">
@@ -108,7 +110,7 @@ export default function App() {
           </div>
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold">{prof}</div>
-            <div className="text-xs text-brun-300">Enseignante</div>
+            <div className="text-xs text-brun-300">Enseignant(e)</div>
           </div>
         </div>
       </aside>

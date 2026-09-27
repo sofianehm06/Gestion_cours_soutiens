@@ -4,7 +4,7 @@ import Entete from "../components/Entete";
 import { Bouton, Carte, Champ, Modale, cx, useUi } from "../components/ui";
 import { exporterCsv } from "../lib/calculs";
 import { aujourdhui, da } from "../lib/format";
-import { enregistrerFichier, estElectron, ouvrirFichier } from "../lib/stockage";
+import { enregistrerFichier, estElectron, ouvrirFichier, type EtatLicence } from "../lib/stockage";
 import { useStore } from "../store";
 
 export default function Parametres() {
@@ -14,7 +14,11 @@ export default function Parametres() {
   const [f, setF] = useState({ nomEtablissement: p.nomEtablissement, nomProf: p.nomProf, tarif: String(p.tarifMensuel), nb: String(p.seancesParMois) });
   const [dossier, setDossier] = useState("");
   const [reinit, setReinit] = useState<"historique" | "tout" | null>(null);
-  useEffect(() => { window.api?.dossier().then(setDossier); }, []);
+  const [licence, setLicence] = useState<EtatLicence | null>(null);
+  useEffect(() => {
+    window.api?.dossier().then(setDossier);
+    window.api?.licence?.etat().then(setLicence);
+  }, []);
 
   const tarif = Number(f.tarif.replace(/\s/g, ""));
   const nb = Number(f.nb);
@@ -23,7 +27,7 @@ export default function Parametres() {
   function enregistrer(e: FormEvent) {
     e.preventDefault();
     if (!valide) return;
-    store.definirParametres({ nomEtablissement: f.nomEtablissement.trim(), nomProf: f.nomProf.trim(), tarifMensuel: tarif, seancesParMois: nb });
+    store.definirParametres({ ...p, nomEtablissement: f.nomEtablissement.trim(), nomProf: f.nomProf.trim(), tarifMensuel: tarif, seancesParMois: nb });
     notifier("Paramètres enregistrés");
   }
 
@@ -58,7 +62,7 @@ export default function Parametres() {
             <form onSubmit={enregistrer} className="flex flex-col gap-4">
               <h2 className="text-[17px] font-bold">Tarif et informations</h2>
               <Champ label="Nom affiché (établissement / cours)" value={f.nomEtablissement} onChange={(e) => setF({ ...f, nomEtablissement: e.target.value })} />
-              <Champ label="Nom de l'enseignante" value={f.nomProf} onChange={(e) => setF({ ...f, nomProf: e.target.value })} />
+              <Champ label="Nom de l'enseignant(e)" value={f.nomProf} onChange={(e) => setF({ ...f, nomProf: e.target.value })} />
               <div className="grid grid-cols-2 gap-4">
                 <Champ label="Prix d'un mois (DA)" value={f.tarif} onChange={(e) => setF({ ...f, tarif: e.target.value })} inputMode="numeric" />
                 <Champ label="Séances par mois" type="number" min={1} max={31} value={f.nb} onChange={(e) => setF({ ...f, nb: e.target.value })} />
@@ -81,17 +85,23 @@ export default function Parametres() {
               <Action icone={<Upload size={18} />} titre="Restaurer une sauvegarde" texte="Remplace les données actuelles" onClick={restaurer} />
               {estElectron() && <Action icone={<FolderOpen size={18} />} titre="Ouvrir le dossier des données" texte={dossier} onClick={() => window.api?.ouvrirDossier()} />}
             </div>
+            {licence?.requise && (
+              <p className="mt-4 text-xs text-brun-400">
+                Licence {licence.active ? `activée pour ${licence.nom}` : "non activée"} · ordinateur <span className="font-mono">{licence.code}</span>
+              </p>
+            )}
           </Carte>
 
           <Carte className="col-span-2 border-rouge/30 p-6">
             <h2 className="text-[17px] font-bold">Fin d'année / nouvelle année</h2>
             <p className="mt-1 text-sm text-brun-400">
               Pour repartir à zéro. Une sauvegarde est proposée juste avant, pour pouvoir tout récupérer si besoin
-              (Restaurer une sauvegarde). Les paramètres (nom, tarif) sont toujours conservés.
+              (Restaurer une sauvegarde). Pour donner le logiciel à un autre enseignant, utilisez « Tout supprimer »
+              en cochant « Effacer aussi le nom de l'enseignant(e) ».
             </p>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <Action icone={<RotateCcw size={18} />} titre="Remettre les compteurs à zéro" texte="Efface séances et paiements · garde élèves et groupes" onClick={() => setReinit("historique")} danger />
-              <Action icone={<Trash2 size={18} />} titre="Tout supprimer" texte="Efface élèves, groupes, séances et paiements" onClick={() => setReinit("tout")} danger />
+              <Action icone={<Trash2 size={18} />} titre="Tout supprimer" texte="Efface élèves, groupes, séances et paiements (et, au choix, le nom de l'enseignant)" onClick={() => setReinit("tout")} danger />
             </div>
           </Carte>
         </div>
@@ -106,10 +116,11 @@ function DialogueReinit({ mode, onFermer }: { mode: "historique" | "tout"; onFer
   const { notifier } = useUi();
   const [sauvegarde, setSauvegarde] = useState(true);
   const [saisie, setSaisie] = useState("");
+  const [effacerProf, setEffacerProf] = useState(false);
   const d = store.donnees;
   const valide = saisie.trim().toUpperCase() === "SUPPRIMER";
   const efface = mode === "tout"
-    ? [`${d.eleves.length} élève(s)`, `${d.groupes.length} groupe(s)`, `${d.seances.length} séance(s)`, `${d.paiements.length} paiement(s)`]
+    ? [`${d.eleves.length} élève(s)`, `${d.groupes.length} groupe(s)`, `${d.seances.length} séance(s)`, `${d.paiements.length} paiement(s)`, ...(effacerProf ? ["les informations de l'enseignant et le tarif"] : [])]
     : [`${d.seances.length} séance(s)`, `${d.paiements.length} paiement(s)`];
 
   async function valider() {
@@ -121,7 +132,7 @@ function DialogueReinit({ mode, onFermer }: { mode: "historique" | "tout"; onFer
         return;
       }
     }
-    store.reinitialiser(mode);
+    store.reinitialiser(mode === "tout" && effacerProf ? "neuf" : mode);
     notifier(mode === "tout" ? "Toutes les données ont été supprimées" : "Séances et paiements remis à zéro");
     onFermer();
   }
@@ -148,6 +159,15 @@ function DialogueReinit({ mode, onFermer }: { mode: "historique" | "tout"; onFer
           <input type="checkbox" checked={sauvegarde} onChange={(e) => setSauvegarde(e.target.checked)} className="size-4 accent-[var(--color-vert)]" />
           Faire une sauvegarde avant (recommandé)
         </label>
+        {mode === "tout" && (
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" checked={effacerProf} onChange={(e) => setEffacerProf(e.target.checked)} className="mt-0.5 size-4 accent-[var(--color-vert)]" />
+            <span>
+              Effacer aussi le nom de l'enseignant(e), le nom affiché et le tarif
+              <span className="block text-xs text-brun-400">Pour donner le logiciel à un autre enseignant : il retrouvera l'écran de bienvenue au prochain affichage.</span>
+            </span>
+          </label>
+        )}
         <Champ label="Pour confirmer, tapez SUPPRIMER" value={saisie} onChange={(e) => setSaisie(e.target.value)} autoFocus />
       </div>
     </Modale>

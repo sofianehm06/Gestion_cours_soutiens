@@ -5,6 +5,7 @@ export const PARAMETRES_DEFAUT: Parametres = {
   nomProf: "",
   tarifMensuel: 1500,
   seancesParMois: 4,
+  configure: false,
 };
 
 export function donneesVides(): Donnees {
@@ -21,7 +22,12 @@ export function normaliser(brut: unknown): Donnees {
   const idsGroupes = new Set(groupes.map((g) => g.id));
   return {
     version: 1,
-    parametres: { ...PARAMETRES_DEFAUT, ...(d.parametres ?? {}) },
+    parametres: {
+      ...PARAMETRES_DEFAUT,
+      ...(d.parametres ?? {}),
+      // Données d'avant l'écran d'accueil : déjà utilisées, donc déjà configurées.
+      configure: d.parametres?.configure ?? (!!d.parametres?.nomProf || d.eleves.length > 0),
+    },
     groupes,
     // Anciennes données : pas de groupe. Groupe disparu : l'élève repasse « sans groupe ».
     eleves: d.eleves.map((e) => ({ ...e, groupeId: e.groupeId && idsGroupes.has(e.groupeId) ? e.groupeId : "" })),

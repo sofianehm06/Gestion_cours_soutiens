@@ -7,6 +7,17 @@ interface ApiElectron {
   ouvrirDossier(): Promise<string>;
   enregistrerFichier(o: { nomParDefaut: string; contenu: string; filtres: { name: string; extensions: string[] }[] }): Promise<boolean>;
   ouvrirFichier(o: { filtres: { name: string; extensions: string[] }[] }): Promise<string | null>;
+  licence: {
+    etat(): Promise<EtatLicence>;
+    activer(cle: string): Promise<boolean>;
+  };
+}
+
+export interface EtatLicence {
+  requise: boolean; // false tant que la clé publique n'est pas installée
+  active: boolean;
+  code: string; // code de cet ordinateur, à envoyer au vendeur
+  nom?: string; // enseignant(e) à qui la licence a été délivrée
 }
 
 declare global {

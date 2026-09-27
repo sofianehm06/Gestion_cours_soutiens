@@ -8,4 +8,8 @@ contextBridge.exposeInMainWorld("api", {
   ouvrirDossier: () => ipcRenderer.invoke("donnees:ouvrirDossier"),
   enregistrerFichier: (options) => ipcRenderer.invoke("fichier:enregistrer", options),
   ouvrirFichier: (options) => ipcRenderer.invoke("fichier:ouvrir", options),
+  licence: {
+    etat: () => ipcRenderer.invoke("licence:etat"),
+    activer: (cle) => ipcRenderer.invoke("licence:activer", cle),
+  },
 });

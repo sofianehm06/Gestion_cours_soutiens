@@ -27,8 +27,12 @@ interface Store {
   supprimerPaiement(id: string): void;
   definirParametres(p: Parametres): void;
   remplacer(d: unknown): void;
-  /** Fin d'année : « historique » efface séances et paiements (garde élèves et groupes), « tout » efface tout sauf les paramètres. */
-  reinitialiser(mode: "historique" | "tout"): void;
+  /**
+   * « historique » : efface séances et paiements (garde élèves et groupes).
+   * « tout » : efface tout sauf les paramètres.
+   * « neuf » : efface tout, paramètres compris (logiciel comme neuf, pour un autre enseignant).
+   */
+  reinitialiser(mode: "historique" | "tout" | "neuf"): void;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -144,8 +148,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       reinitialiser(mode) {
         maj((d) =>
-          mode === "tout"
-            ? { ...donneesVides(), parametres: d.parametres }
+          mode === "neuf" ? donneesVides()
+            : mode === "tout" ? { ...donneesVides(), parametres: d.parametres }
             : { ...d, seances: [], paiements: [] },
         );
       },
