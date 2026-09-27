@@ -1,11 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { bilans, donneesVides, normaliser, prixSeance } from "./lib/calculs";
+import { bilans, donneesVides, normaliser, prixSeanceEleve } from "./lib/calculs";
 import { aujourdhui, nouvelId } from "./lib/format";
 import { charger, sauver } from "./lib/stockage";
 import type { Bilan, Donnees, Eleve, Groupe, Parametres } from "./lib/types";
 
-export type ChampsEleve = Pick<Eleve, "nom" | "prenom" | "telephone" | "niveau" | "groupeId">;
-export type ChampsGroupe = Pick<Groupe, "nom" | "horaire">;
+export type ChampsEleve = Pick<Eleve, "nom" | "prenom" | "telephone" | "niveau" | "groupeId" | "tarifMensuel">;
+export type ChampsGroupe = Pick<Groupe, "nom" | "horaire" | "tarifMensuel">;
 
 interface Store {
   donnees: Donnees;
@@ -62,7 +62,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!donnees) return null;
     const liste = bilans(donnees);
     const parId = new Map(liste.map((b) => [b.eleve.id, b]));
-    const prix = prixSeance(donnees.parametres);
+    // Prix d'une séance pour un élève, figé au moment où la séance est enregistrée.
+    const prixPour = (d: Donnees, eleveId: string) => {
+      const e = d.eleves.find((x) => x.id === eleveId);
+      return prixSeanceEleve(d, e ?? { tarifMensuel: null, groupeId: "" });
+    };
     const groupes = new Map(donnees.groupes.map((g) => [g.id, g]));
     return {
       donnees,
@@ -72,7 +76,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const id = nouvelId();
         const eleve: Eleve = {
           id, nom: c.nom.trim(), prenom: c.prenom.trim(), telephone: c.telephone.trim(),
-          niveau: c.niveau.trim(), actif: true, dateInscription: aujourdhui(), groupeId: c.groupeId,
+          niveau: c.niveau.trim(), actif: true, dateInscription: aujourdhui(), groupeId: c.groupeId, tarifMensuel: c.tarifMensuel,
         };
         maj((d) => ({ ...d, eleves: [...d.eleves, eleve] }));
         return id;
@@ -91,13 +95,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       groupeDe: (id) => groupes.get(id),
       ajouterGroupe(c) {
         const id = nouvelId();
-        maj((d) => ({ ...d, groupes: [...d.groupes, { id, nom: c.nom.trim(), horaire: c.horaire.trim() }] }));
+        maj((d) => ({ ...d, groupes: [...d.groupes, { id, nom: c.nom.trim(), horaire: c.horaire.trim(), tarifMensuel: c.tarifMensuel }] }));
         return id;
       },
       modifierGroupe(id, c) {
         maj((d) => ({
           ...d,
-          groupes: d.groupes.map((g) => (g.id === id ? { ...g, nom: c.nom.trim(), horaire: c.horaire.trim() } : g)),
+          groupes: d.groupes.map((g) => (g.id === id ? { ...g, nom: c.nom.trim(), horaire: c.horaire.trim(), tarifMensuel: c.tarifMensuel } : g)),
         }));
       },
       supprimerGroupe(id) {
@@ -122,13 +126,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const gardees = d.seances.filter((s) => s.date !== date || voulus.has(s.eleveId));
           const nouvelles = ids
             .filter((id) => !deja.has(id))
-            .map((eleveId) => ({ id: nouvelId(), eleveId, date, prix }));
+            .map((eleveId) => ({ id: nouvelId(), eleveId, date, prix: prixPour(d, eleveId) }));
           return { ...d, seances: [...gardees, ...nouvelles] };
         });
       },
       ajouterSeance(eleveId, date) {
         if (donnees.seances.some((s) => s.eleveId === eleveId && s.date === date)) return false;
-        maj((d) => ({ ...d, seances: [...d.seances, { id: nouvelId(), eleveId, date, prix }] }));
+        maj((d) => ({ ...d, seances: [...d.seances, { id: nouvelId(), eleveId, date, prix: prixPour(d, eleveId) }] }));
         return true;
       },
       supprimerSeance(id) {

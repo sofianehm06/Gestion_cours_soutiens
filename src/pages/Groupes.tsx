@@ -56,6 +56,7 @@ export default function Groupes({ aller, groupeInitial }: { aller: Aller; groupe
                         <div className="truncate text-[15px] font-bold leading-tight">{g.nom}</div>
                         <div className="mt-0.5 flex items-center gap-1 truncate text-xs text-brun-400">
                           {g.horaire ? <><Clock size={11} />{g.horaire}</> : "Pas d'horaire"}
+                          <span className="ml-1 font-semibold text-brun-600">· {da(g.tarifMensuel ?? store.donnees.parametres.tarifMensuel)}/mois</span>
                         </div>
                       </div>
                     </div>
@@ -119,7 +120,10 @@ function FicheGroupe({ groupeId, aller, onFermer }: { groupeId: string; aller: A
       <div className="sombre relative bg-brun-800 px-6 pb-5 pt-6 text-creme">
         <button onClick={onFermer} className="absolute right-4 top-4 grid size-8 place-items-center rounded-full text-brun-300 hover:bg-brun-700 cursor-pointer"><X size={17} /></button>
         <div className="pr-8 text-lg font-bold">{g.nom}</div>
-        <div className="flex items-center gap-1 text-sm text-brun-300">{g.horaire ? <><Clock size={12} />{g.horaire}</> : "Pas d'horaire"}</div>
+        <div className="flex items-center gap-1 text-sm text-brun-300">
+          {g.horaire ? <><Clock size={12} />{g.horaire}</> : "Pas d'horaire"}
+          <span className="ml-1">· {da(g.tarifMensuel ?? store.donnees.parametres.tarifMensuel)} / mois{g.tarifMensuel == null ? " (tarif général)" : ""}</span>
+        </div>
         <div className="mt-4 flex items-center justify-between rounded-2xl bg-brun-700/70 px-4 py-3">
           <span className="text-sm text-brun-300">{actifs.length} élève(s) · reste à encaisser</span>
           <span className={cx("text-xl font-extrabold", reste > 0.5 ? "text-orange" : "text-[#6fd3a2]")}>{da(reste)}</span>

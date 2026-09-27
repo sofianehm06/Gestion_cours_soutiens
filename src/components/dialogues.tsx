@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { correspond, prixSeance } from "../lib/calculs";
+import { correspond, origineTarif, prixSeanceEleve, tarifEleve } from "../lib/calculs";
 import { aujourdhui, da } from "../lib/format";
 import type { Eleve } from "../lib/types";
 import { useStore } from "../store";
@@ -12,20 +12,30 @@ export function DialogueEleve({ eleve, groupeInitial = "", onFermer, onCree }: {
   const [c, setC] = useState({
     nom: eleve?.nom ?? "", prenom: eleve?.prenom ?? "", telephone: eleve?.telephone ?? "", niveau: eleve?.niveau ?? "",
     groupeId: eleve?.groupeId ?? groupeInitial,
+    tarif: eleve?.tarifMensuel != null ? String(eleve.tarifMensuel) : "",
   });
+  const p = store.donnees.parametres;
   const avecGroupes = store.donnees.groupes.length > 0;
-  const valide = c.nom.trim() && c.prenom.trim();
+  // Tarif vide = tarif général
+  const tarifSaisi = c.tarif.replace(/\s/g, "");
+  const tarifMensuel = tarifSaisi === "" ? null : Number(tarifSaisi);
+  const tarifValide = tarifMensuel === null || (Number.isFinite(tarifMensuel) && tarifMensuel >= 0);
+  const valide = c.nom.trim() && c.prenom.trim() && tarifValide;
+  const tarifChange = !!eleve && (eleve.tarifMensuel ?? null) !== tarifMensuel;
+  // Tarif appliqué si le champ reste vide : celui du groupe choisi, sinon le tarif général.
+  const defaut = origineTarif(store.donnees, { tarifMensuel: null, groupeId: c.groupeId });
+  const libDefaut = defaut.origine === "groupe" ? "tarif du groupe" : "tarif général";
 
   function valider(e: FormEvent) {
     e.preventDefault();
     if (!valide) return;
     if (eleve) {
       store.modifierEleve(eleve.id, {
-        nom: c.nom.trim(), prenom: c.prenom.trim(), telephone: c.telephone.trim(), niveau: c.niveau.trim(), groupeId: c.groupeId,
+        nom: c.nom.trim(), prenom: c.prenom.trim(), telephone: c.telephone.trim(), niveau: c.niveau.trim(), groupeId: c.groupeId, tarifMensuel,
       });
       notifier("Élève modifié");
     } else {
-      const id = store.ajouterEleve(c);
+      const id = store.ajouterEleve({ ...c, tarifMensuel });
       notifier(`${c.prenom.trim()} ${c.nom.trim()} ajouté(e)`);
       onCree?.(id);
     }
@@ -40,6 +50,23 @@ export function DialogueEleve({ eleve, groupeInitial = "", onFermer, onCree }: {
         <Champ label="Téléphone (parent)" value={c.telephone} onChange={(e) => setC({ ...c, telephone: e.target.value })} placeholder="0550 12 34 56" />
         <Champ label="Niveau / classe" value={c.niveau} onChange={(e) => setC({ ...c, niveau: e.target.value })} placeholder="ex. 4AM" />
         {avecGroupes && <div className="col-span-2"><SelectGroupe label="Groupe" value={c.groupeId} onChange={(groupeId) => setC({ ...c, groupeId })} /></div>}
+        <div className="col-span-2 flex flex-col gap-1.5">
+          <Champ
+            label="Tarif personnel (DA / mois)"
+            value={c.tarif}
+            onChange={(e) => setC({ ...c, tarif: e.target.value })}
+            inputMode="numeric"
+            placeholder={`Vide = ${libDefaut} (${da(defaut.tarif)})`}
+          />
+          <span className={cx("text-xs", tarifValide ? "text-brun-400" : "text-rouge")}>
+            {!tarifValide
+              ? "Montant invalide"
+              : tarifMensuel === null
+                ? `${libDefaut[0].toUpperCase()}${libDefaut.slice(1)} : ${da(defaut.tarif)} / mois, soit ${da(defaut.tarif / p.seancesParMois)} la séance`
+                : `${da(tarifMensuel)} / mois, soit ${da(tarifMensuel / p.seancesParMois)} la séance (ex. cours individuel)`}
+            {tarifChange && tarifValide && " · s'applique aux prochaines séances, les séances déjà faites gardent leur prix"}
+          </span>
+        </div>
         <div className="col-span-2 mt-2 flex justify-end gap-2">
           <Bouton type="button" onClick={onFermer}>Annuler</Bouton>
           <Bouton type="submit" variante="vert" disabled={!valide}>{eleve ? "Enregistrer" : "Ajouter l'élève"}</Bouton>
@@ -55,7 +82,7 @@ export function DialoguePaiement({ eleveId, onFermer }: { eleveId?: string; onFe
   const [choisi, setChoisi] = useState(eleveId);
   const [recherche, setRecherche] = useState("");
   const b = choisi ? store.bilanDe(choisi) : undefined;
-  const tarif = store.donnees.parametres.tarifMensuel;
+  const tarif = b ? tarifEleve(store.donnees, b.eleve) : store.donnees.parametres.tarifMensuel;
   const [montant, setMontant] = useState(() => (b ? String(Math.round(b.reste > 0 ? b.reste : tarif)) : ""));
   const [date, setDate] = useState(aujourdhui());
   const [note, setNote] = useState("");
@@ -64,8 +91,9 @@ export function DialoguePaiement({ eleveId, onFermer }: { eleveId?: string; onFe
 
   function choisir(id: string) {
     setChoisi(id);
-    const r = store.bilanDe(id)?.reste ?? 0;
-    setMontant(String(Math.round(r > 0 ? r : tarif)));
+    const x = store.bilanDe(id);
+    const r = x?.reste ?? 0;
+    setMontant(String(Math.round(r > 0 ? r : x ? tarifEleve(store.donnees, x.eleve) : tarif)));
   }
 
   function valider(e: FormEvent) {
@@ -140,7 +168,7 @@ export function DialogueSeance({ eleveId, onFermer }: { eleveId: string; onFerme
     } else notifier("Une séance existe déjà à cette date", "erreur");
   }
   return (
-    <Modale titre="Ajouter une séance" sousTitre={`${b.eleve.prenom} ${b.eleve.nom} · ${da(prixSeance(store.donnees.parametres))} la séance`} onFermer={onFermer} largeur={400}>
+    <Modale titre="Ajouter une séance" sousTitre={`${b.eleve.prenom} ${b.eleve.nom} · ${da(prixSeanceEleve(store.donnees, b.eleve))} la séance`} onFermer={onFermer} largeur={400}>
       <form onSubmit={valider} className="flex flex-col gap-4">
         <Champ label="Date de la séance" type="date" value={date} onChange={(e) => setDate(e.target.value)} autoFocus />
         <div className="flex justify-end gap-2">

@@ -18,7 +18,10 @@ export function normaliser(brut: unknown): Donnees {
   if (!Array.isArray(d.eleves) || !Array.isArray(d.seances) || !Array.isArray(d.paiements)) {
     throw new Error("Fichier de données invalide.");
   }
-  const groupes = Array.isArray(d.groupes) ? d.groupes : [];
+  const groupes = (Array.isArray(d.groupes) ? d.groupes : []).map((g) => ({
+    ...g,
+    tarifMensuel: typeof g.tarifMensuel === "number" ? g.tarifMensuel : null,
+  }));
   const idsGroupes = new Set(groupes.map((g) => g.id));
   return {
     version: 1,
@@ -30,13 +33,34 @@ export function normaliser(brut: unknown): Donnees {
     },
     groupes,
     // Anciennes données : pas de groupe. Groupe disparu : l'élève repasse « sans groupe ».
-    eleves: d.eleves.map((e) => ({ ...e, groupeId: e.groupeId && idsGroupes.has(e.groupeId) ? e.groupeId : "" })),
+    eleves: d.eleves.map((e) => ({
+      ...e,
+      groupeId: e.groupeId && idsGroupes.has(e.groupeId) ? e.groupeId : "",
+      tarifMensuel: typeof e.tarifMensuel === "number" ? e.tarifMensuel : null,
+    })),
     seances: d.seances,
     paiements: d.paiements,
   };
 }
 
 export const prixSeance = (p: Parametres) => p.tarifMensuel / p.seancesParMois;
+
+type SourceTarif = Pick<Donnees, "parametres" | "groupes">;
+type EleveTarif = Pick<Eleve, "tarifMensuel" | "groupeId">;
+
+/** D'où vient le tarif d'un élève : son tarif personnel, sinon celui de son groupe, sinon le tarif général. */
+export function origineTarif(d: SourceTarif, e: EleveTarif): { tarif: number; origine: "eleve" | "groupe" | "general" } {
+  if (e.tarifMensuel != null) return { tarif: e.tarifMensuel, origine: "eleve" };
+  const g = e.groupeId ? d.groupes.find((x) => x.id === e.groupeId) : undefined;
+  if (g?.tarifMensuel != null) return { tarif: g.tarifMensuel, origine: "groupe" };
+  return { tarif: d.parametres.tarifMensuel, origine: "general" };
+}
+
+/** Tarif mensuel appliqué à un élève. */
+export const tarifEleve = (d: SourceTarif, e: EleveTarif) => origineTarif(d, e).tarif;
+
+/** Prix d'une séance pour un élève (tarif mensuel ÷ séances par mois). */
+export const prixSeanceEleve = (d: SourceTarif, e: EleveTarif) => tarifEleve(d, e) / d.parametres.seancesParMois;
 
 export function bilans(d: Donnees): Bilan[] {
   const map = new Map<string, Bilan>();
@@ -123,10 +147,10 @@ export function comparerGroupes(a: { nom: string }, b: { nom: string }) {
 
 export function exporterCsv(d: Donnees): string {
   const groupes = new Map(d.groupes.map((g) => [g.id, g.nom]));
-  const lignes = [["Nom", "Prénom", "Téléphone", "Niveau", "Groupe", "Actif", "Séances", "Montant dû (DA)", "Payé (DA)", "Reste (DA)"]];
+  const lignes = [["Nom", "Prénom", "Téléphone", "Niveau", "Groupe", "Tarif mensuel (DA)", "Actif", "Séances", "Montant dû (DA)", "Payé (DA)", "Reste (DA)"]];
   for (const b of bilans(d)) {
     lignes.push([
-      b.eleve.nom, b.eleve.prenom, b.eleve.telephone, b.eleve.niveau, groupes.get(b.eleve.groupeId) ?? "", b.eleve.actif ? "oui" : "non",
+      b.eleve.nom, b.eleve.prenom, b.eleve.telephone, b.eleve.niveau, groupes.get(b.eleve.groupeId) ?? "", String(tarifEleve(d, b.eleve)), b.eleve.actif ? "oui" : "non",
       String(b.seances), b.du.toFixed(0), b.paye.toFixed(0), b.reste.toFixed(0),
     ]);
   }

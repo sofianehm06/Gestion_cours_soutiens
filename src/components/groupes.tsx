@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { comparerGroupes, correspond, dansGroupe, SANS_GROUPE } from "../lib/calculs";
+import { da } from "../lib/format";
 import type { Groupe } from "../lib/types";
 import { useStore } from "../store";
 import { Avatar, Bouton, Champ, Modale, cx, useUi } from "./ui";
@@ -62,20 +63,24 @@ export function SelectGroupe({ label, value, onChange }: { label?: string; value
 export function DialogueGroupe({ groupe, onFermer, onCree }: { groupe?: Groupe; onFermer(): void; onCree?(id: string): void }) {
   const store = useStore();
   const { notifier } = useUi();
-  const [c, setC] = useState({ nom: groupe?.nom ?? "", horaire: groupe?.horaire ?? "" });
+  const [c, setC] = useState({ nom: groupe?.nom ?? "", horaire: groupe?.horaire ?? "", tarif: groupe?.tarifMensuel != null ? String(groupe.tarifMensuel) : "" });
+  const p = store.donnees.parametres;
+  const tarifSaisi = c.tarif.replace(/\s/g, "");
+  const tarifMensuel = tarifSaisi === "" ? null : Number(tarifSaisi);
+  const tarifValide = tarifMensuel === null || (Number.isFinite(tarifMensuel) && tarifMensuel >= 0);
   const doublon = store.donnees.groupes.some(
     (g) => g.id !== groupe?.id && g.nom.trim().toLowerCase() === c.nom.trim().toLowerCase(),
   );
-  const valide = c.nom.trim() && !doublon;
+  const valide = c.nom.trim() && !doublon && tarifValide;
 
   function valider(e: FormEvent) {
     e.preventDefault();
     if (!valide) return;
     if (groupe) {
-      store.modifierGroupe(groupe.id, c);
+      store.modifierGroupe(groupe.id, { nom: c.nom, horaire: c.horaire, tarifMensuel });
       notifier("Groupe modifié");
     } else {
-      const id = store.ajouterGroupe(c);
+      const id = store.ajouterGroupe({ nom: c.nom, horaire: c.horaire, tarifMensuel });
       notifier(`Groupe « ${c.nom.trim()} » créé`);
       onCree?.(id);
     }
@@ -87,6 +92,14 @@ export function DialogueGroupe({ groupe, onFermer, onCree }: { groupe?: Groupe; 
       <form onSubmit={valider} className="flex flex-col gap-4">
         <Champ label="Nom du groupe *" value={c.nom} onChange={(e) => setC({ ...c, nom: e.target.value })} placeholder="ex. 4AM Maths" autoFocus />
         <Champ label="Horaire" value={c.horaire} onChange={(e) => setC({ ...c, horaire: e.target.value })} placeholder="ex. Samedi 14h – 16h" />
+        <div className="flex flex-col gap-1.5">
+          <Champ label="Tarif du groupe (DA / mois)" value={c.tarif} onChange={(e) => setC({ ...c, tarif: e.target.value })} inputMode="numeric" placeholder={`Vide = tarif général (${da(p.tarifMensuel)})`} />
+          <span className={cx("text-xs", tarifValide ? "text-brun-400" : "text-rouge")}>
+            {!tarifValide
+              ? "Montant invalide"
+              : `${da(tarifMensuel ?? p.tarifMensuel)} / mois, soit ${da((tarifMensuel ?? p.tarifMensuel) / p.seancesParMois)} la séance. Un élève peut quand même avoir son propre tarif.`}
+          </span>
+        </div>
         <div className="flex justify-end gap-2">
           <Bouton type="button" onClick={onFermer}>Annuler</Bouton>
           <Bouton type="submit" variante="vert" disabled={!valide}>{groupe ? "Enregistrer" : "Créer le groupe"}</Bouton>

@@ -64,14 +64,14 @@ export default function Parametres() {
               <Champ label="Nom affiché (établissement / cours)" value={f.nomEtablissement} onChange={(e) => setF({ ...f, nomEtablissement: e.target.value })} />
               <Champ label="Nom de l'enseignant(e)" value={f.nomProf} onChange={(e) => setF({ ...f, nomProf: e.target.value })} />
               <div className="grid grid-cols-2 gap-4">
-                <Champ label="Prix d'un mois (DA)" value={f.tarif} onChange={(e) => setF({ ...f, tarif: e.target.value })} inputMode="numeric" />
+                <Champ label="Tarif général (DA / mois)" value={f.tarif} onChange={(e) => setF({ ...f, tarif: e.target.value })} inputMode="numeric" />
                 <Champ label="Séances par mois" type="number" min={1} max={31} value={f.nb} onChange={(e) => setF({ ...f, nb: e.target.value })} />
               </div>
               <div className="flex items-center justify-between rounded-2xl bg-creme-200 px-4 py-3 text-sm">
                 <span className="text-brun-600">Prix d'une séance</span>
                 <span className="font-bold">{valide ? da(tarif / nb) : "—"}</span>
               </div>
-              <p className="text-xs leading-relaxed text-brun-400">Un nouveau tarif s'applique aux prochaines séances. Les séances déjà enregistrées gardent leur prix.</p>
+              <p className="text-xs leading-relaxed text-brun-400">Le tarif général s'applique aux élèves sans tarif particulier. Un groupe (page Groupes → Modifier) ou un élève (fiche → Modifier) peut avoir son propre tarif. Un nouveau tarif s'applique aux prochaines séances ; les séances déjà enregistrées gardent leur prix.</p>
               <Bouton type="submit" variante="vert" disabled={!valide} className="self-start">Enregistrer</Bouton>
             </form>
           </Carte>

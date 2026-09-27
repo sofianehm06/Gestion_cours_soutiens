@@ -8,7 +8,10 @@ générées par Lovable), emballées en application de bureau avec **Electron**.
 
 ## Principe
 
-- **1 mois = 4 séances = 1500 DA**, soit **375 DA la séance** (modifiable dans *Paramètres*).
+- **1 mois = 4 séances = 1500 DA**, soit **375 DA la séance** : c'est le tarif général (modifiable dans *Paramètres*).
+- Un **groupe** peut avoir son propre tarif (Groupes → Modifier) et un **élève** aussi, par ex. un cours
+  individuel à 7000 DA/mois (fiche de l'élève → Modifier). Priorité : tarif de l'élève, sinon celui de
+  son groupe, sinon le tarif général. Prix d'une séance = tarif mensuel ÷ séances par mois.
 - Montant dû = somme des séances faites. Reste à payer = montant dû − paiements.
 - Si le tarif change, les séances déjà enregistrées gardent leur prix.
 

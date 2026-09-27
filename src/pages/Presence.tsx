@@ -4,7 +4,7 @@ import Entete, { Recherche } from "../components/Entete";
 import { DialogueEleve } from "../components/dialogues";
 import { ChoixGroupe } from "../components/groupes";
 import { Avatar, BarreMois, Bouton, cx, useUi } from "../components/ui";
-import { correspond, dansGroupe, progressionMois, SANS_GROUPE } from "../lib/calculs";
+import { correspond, dansGroupe, progressionMois, SANS_GROUPE, tarifEleve } from "../lib/calculs";
 import { aujourdhui, da, dateCourte, dateLongue, decaler } from "../lib/format";
 import { useStore } from "../store";
 
@@ -118,8 +118,11 @@ export default function Presence({ groupeInitial = "" }: { groupeInitial?: strin
                     </div>
                     <BarreMois faites={faites} total={parMois} />
                   </div>
-                  <div className={cx("text-sm font-bold", b.reste > 0.5 ? "text-rouge" : "text-vert")}>
-                    {b.reste > 0.5 ? `Doit ${da(b.reste)}` : b.reste < -0.5 ? `Avance ${da(-b.reste)}` : "À jour"}
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className={cx("text-sm font-bold", b.reste > 0.5 ? "text-rouge" : "text-vert")}>
+                      {b.reste > 0.5 ? `Doit ${da(b.reste)}` : b.reste < -0.5 ? `Avance ${da(-b.reste)}` : "À jour"}
+                    </span>
+                    <span className="text-[11px] font-medium text-brun-400">{da(tarifEleve(store.donnees, b.eleve))}/mois</span>
                   </div>
                 </button>
               );

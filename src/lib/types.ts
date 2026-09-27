@@ -7,12 +7,14 @@ export interface Eleve {
   actif: boolean;
   dateInscription: string; // AAAA-MM-JJ
   groupeId: string; // "" = sans groupe
+  tarifMensuel: number | null; // tarif personnel (ex. cours individuel) ; null = tarif général
 }
 
 export interface Groupe {
   id: string;
   nom: string;
   horaire: string; // texte libre, ex. « Samedi 14h »
+  tarifMensuel: number | null; // tarif du groupe ; null = tarif général
 }
 
 export interface Seance {

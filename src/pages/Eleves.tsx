@@ -4,7 +4,7 @@ import Entete, { Recherche } from "../components/Entete";
 import { DialogueEleve, DialoguePaiement, DialogueSeance } from "../components/dialogues";
 import { ChoixGroupe } from "../components/groupes";
 import { Avatar, BarreMois, Bouton, Pastille, PastilleReste, cx, useUi } from "../components/ui";
-import { correspond, dansGroupe, detailSeances, progressionMois, SANS_GROUPE, statut } from "../lib/calculs";
+import { correspond, dansGroupe, detailSeances, origineTarif, progressionMois, SANS_GROUPE, statut, tarifEleve } from "../lib/calculs";
 import { da, dateCourte } from "../lib/format";
 import { useStore } from "../store";
 
@@ -157,6 +157,9 @@ function Fiche({ eleveId, onFermer }: { eleveId: string; onFermer(): void }) {
             <div className="flex flex-wrap items-center gap-x-2 text-sm text-brun-300">
               {store.groupeDe(e.groupeId) && <span className="flex items-center gap-1"><UsersRound size={12} />{store.groupeDe(e.groupeId)!.nom}</span>}
               {e.niveau && <span>{e.niveau}</span>}
+              <Pastille ton={e.tarifMensuel != null ? "orange" : "gris"}>
+                {da(tarifEleve(store.donnees, e))} / mois{e.tarifMensuel != null ? " (perso)" : origineTarif(store.donnees, e).origine === "groupe" ? " (groupe)" : ""}
+              </Pastille>
               {e.telephone && <span className="flex items-center gap-1"><Phone size={12} />{e.telephone}</span>}
               {!e.actif && <Pastille ton="gris">archivé</Pastille>}
             </div>
