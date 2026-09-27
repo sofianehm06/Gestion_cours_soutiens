@@ -20,7 +20,14 @@ jobs:
         run: npm run dist:win
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      # Deux artefacts séparés : on ne télécharge que celui dont on a besoin.
       - uses: actions/upload-artifact@v4
         with:
-          name: GestionSoutien-windows
-          path: release/*.exe
+          name: GestionSoutien-portable
+          path: release/GestionSoutien-Portable-*.exe
+          compression-level: 0 # l'exe est déjà compressé
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GestionSoutien-installation
+          path: release/GestionSoutien-Installation-*.exe
+          compression-level: 0

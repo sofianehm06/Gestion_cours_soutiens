@@ -39,7 +39,23 @@ Faites régulièrement une sauvegarde (Paramètres → *Faire une sauvegarde*) s
 - `GestionSoutien-Installation-….exe` : installateur (crée un raccourci sur le bureau) ;
 - `GestionSoutien-Portable-….exe` : version sans installation.
 
-Onglet **Actions** du dépôt → dernier run → artefact *GestionSoutien-windows*.
+Onglet **Actions** du dépôt → dernier run → artefact *GestionSoutien-portable* (à lancer
+directement) **ou** *GestionSoutien-installation* : un seul des deux suffit.
+
+### Sans rien télécharger à chaque mise à jour
+
+Installer une fois [Node.js](https://nodejs.org) (version LTS) et [Git](https://git-scm.com), puis :
+
+```bash
+git clone https://github.com/sofianehm06/dyhia_gestion.git
+cd dyhia_gestion
+npm install        # une seule fois (télécharge Electron)
+npm start          # lance l'application
+```
+
+Pour les mises à jour suivantes : `git pull` puis `npm start` (quelques Ko seulement ;
+refaire `npm install` seulement si `package.json` a changé). Pour tester une branche :
+`git checkout nom-de-la-branche` puis `npm start`.
 
 Construction manuelle sous Windows : `npm ci` puis `npm run dist:win` (résultat dans `release/`).
 
